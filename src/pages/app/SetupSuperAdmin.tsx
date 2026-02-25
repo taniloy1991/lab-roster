@@ -155,7 +155,7 @@ export default function SetupSuperAdmin() {
     setLoading(false);
 
     // Redirect into the app; AppHome will route based on roles + active institution.
-    navigate("/app", { replace: true });
+    navigate("/app/institution", { replace: true });
   };
 
   const checkInstitutionSafeToDelete = async (institutionId: string) => {
