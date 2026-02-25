@@ -35,94 +35,108 @@ const App = () => (
       <Sonner />
       <AuthProvider>
         <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
+          <div className="min-h-screen flex flex-col">
+            <div className="flex-1">
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/signup" element={<Signup />} />
 
-            <Route
-              path="/app"
-              element={
-                <RequireAuth>
-                  <AppShell />
-                </RequireAuth>
-              }
-            >
-              <Route index element={<AppHome />} />
-              <Route path="setup" element={<SetupSuperAdmin />} />
-              <Route
-                path="institution"
-                element={
-                  <RoleGate requireGlobalRole="super_admin">
-                    <InstitutionDashboard />
-                  </RoleGate>
-                }
-              />
+                <Route
+                  path="/app"
+                  element={
+                    <RequireAuth>
+                      <AppShell />
+                    </RequireAuth>
+                  }
+                >
+                  <Route index element={<AppHome />} />
+                  <Route path="setup" element={<SetupSuperAdmin />} />
+                  <Route
+                    path="institution"
+                    element={
+                      <RoleGate requireGlobalRole="super_admin">
+                        <InstitutionDashboard />
+                      </RoleGate>
+                    }
+                  />
 
-              <Route
-                path="lab"
-                element={
-                  <RoleGate requireAnyInstitutionRole={["lab_incharge"]}>
-                    <LabDashboard />
-                  </RoleGate>
-                }
-              />
-              <Route
-                path="me"
-                element={
-                  <RoleGate requireAnyInstitutionRole={["staff"]}>
-                    <StaffDashboard />
-                  </RoleGate>
-                }
-              />
+                  <Route
+                    path="lab"
+                    element={
+                      <RoleGate requireAnyInstitutionRole={["lab_incharge"]}>
+                        <LabDashboard />
+                      </RoleGate>
+                    }
+                  />
+                  <Route
+                    path="me"
+                    element={
+                      <RoleGate requireAnyInstitutionRole={["staff"]}>
+                        <StaffDashboard />
+                      </RoleGate>
+                    }
+                  />
 
-              <Route
-                path="staff"
-                element={
-                  <RoleGate requireAnyInstitutionRole={["lab_incharge"]}>
-                    <StaffManagement />
-                  </RoleGate>
-                }
-              />
-              <Route
-                path="holidays"
-                element={
-                  <RoleGate requireAnyInstitutionRole={["lab_incharge"]}>
-                    <HolidaysCalendar />
-                  </RoleGate>
-                }
-              />
-              <Route
-                path="leaves"
-                element={
-                  <RoleGate requireAnyInstitutionRole={["lab_incharge"]}>
-                    <LeaveManagement />
-                  </RoleGate>
-                }
-              />
-              <Route
-                path="roster"
-                element={
-                  <RoleGate requireAnyInstitutionRole={["lab_incharge", "staff"]}>
-                    <RosterCalendar />
-                  </RoleGate>
-                }
-              />
-              <Route
-                path="reports/monthly"
-                element={
-                  <RoleGate requireAnyInstitutionRole={["lab_incharge"]}>
-                    <ReportsMonthly />
-                  </RoleGate>
-                }
-              />
+                  <Route
+                    path="staff"
+                    element={
+                      <RoleGate requireAnyInstitutionRole={["lab_incharge"]}>
+                        <StaffManagement />
+                      </RoleGate>
+                    }
+                  />
+                  <Route
+                    path="holidays"
+                    element={
+                      <RoleGate requireAnyInstitutionRole={["lab_incharge"]}>
+                        <HolidaysCalendar />
+                      </RoleGate>
+                    }
+                  />
+                  <Route
+                    path="leaves"
+                    element={
+                      <RoleGate requireAnyInstitutionRole={["lab_incharge"]}>
+                        <LeaveManagement />
+                      </RoleGate>
+                    }
+                  />
+                  <Route
+                    path="roster"
+                    element={
+                      <RoleGate requireAnyInstitutionRole={["lab_incharge", "staff"]}>
+                        <RosterCalendar />
+                      </RoleGate>
+                    }
+                  />
+                  <Route
+                    path="reports/monthly"
+                    element={
+                      <RoleGate requireAnyInstitutionRole={["lab_incharge"]}>
+                        <ReportsMonthly />
+                      </RoleGate>
+                    }
+                  />
 
-              <Route path="*" element={<Navigate to="/app" replace />} />
-            </Route>
+                  <Route path="*" element={<Navigate to="/app" replace />} />
+                </Route>
 
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </div>
+
+            {/* Screen footer (every page) */}
+            <footer className="app-screen-footer px-4 py-4 text-center text-xs text-muted-foreground">
+              Designed and Developed by Tanvir Ahmed Niloy
+            </footer>
+
+            {/* Print/PDF footer (fixed to page bottom) */}
+            <div className="app-print-footer text-center text-xs text-muted-foreground">
+              Designed and Developed by Tanvir Ahmed Niloy
+            </div>
+          </div>
         </BrowserRouter>
       </AuthProvider>
     </TooltipProvider>
