@@ -5,6 +5,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/providers/AuthProvider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -38,6 +48,9 @@ export default function SetupSuperAdmin() {
   const [institutions, setInstitutions] = useState<InstitutionRow[]>([]);
   const [institutionsLoading, setInstitutionsLoading] = useState(false);
   const [institutionsError, setInstitutionsError] = useState<string | null>(null);
+
+  const [deleteTarget, setDeleteTarget] = useState<InstitutionRow | null>(null);
+  const [deleteChecking, setDeleteChecking] = useState(false);
 
   const isSuperAdmin = globalRoles.includes("super_admin");
 
@@ -145,6 +158,75 @@ export default function SetupSuperAdmin() {
     navigate("/app", { replace: true });
   };
 
+  const checkInstitutionSafeToDelete = async (institutionId: string) => {
+    setDeleteChecking(true);
+    setStatus(null);
+
+    const [staffRes, rosterRes, leaveRes] = await Promise.all([
+      supabase.from("staff").select("id", { count: "exact", head: true }).eq("institution_id", institutionId),
+      supabase.from("roster_days").select("id", { count: "exact", head: true }).eq("institution_id", institutionId),
+      supabase.from("leave_requests").select("id", { count: "exact", head: true }).eq("institution_id", institutionId),
+    ]);
+
+    setDeleteChecking(false);
+
+    if (staffRes.error) throw staffRes.error;
+    if (rosterRes.error) throw rosterRes.error;
+    if (leaveRes.error) throw leaveRes.error;
+
+    const staffCount = staffRes.count ?? 0;
+    const rosterCount = rosterRes.count ?? 0;
+    const leaveCount = leaveRes.count ?? 0;
+
+    if (staffCount > 0) {
+      setStatus("Cannot delete: staff exists under this institution.");
+      return false;
+    }
+    if (rosterCount > 0) {
+      setStatus("Cannot delete: roster entries exist under this institution.");
+      return false;
+    }
+    if (leaveCount > 0) {
+      setStatus("Cannot delete: leave requests exist under this institution.");
+      return false;
+    }
+
+    return true;
+  };
+
+  const deleteInstitution = async (institution: InstitutionRow) => {
+    if (!userId) return;
+
+    setLoading(true);
+    setStatus(null);
+
+    try {
+      const ok = await checkInstitutionSafeToDelete(institution.id);
+      if (!ok) {
+        setLoading(false);
+        return;
+      }
+
+      // If you're currently scoped to this institution, clear it first.
+      if (activeInstitutionId === institution.id) {
+        const clear = await supabase.from("profiles").update({ active_institution_id: null }).eq("user_id", userId);
+        if (clear.error) throw clear.error;
+      }
+
+      const del = await supabase.from("institutions").delete().eq("id", institution.id);
+      if (del.error) throw del.error;
+
+      setDeleteTarget(null);
+      setStatus("Institution deleted.");
+      await fetchInstitutions();
+      await refresh();
+    } catch (e: any) {
+      setStatus(e?.message ?? "Delete failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <header>
@@ -225,7 +307,7 @@ export default function SetupSuperAdmin() {
                       <TableRow>
                         <TableHead>Institution Name</TableHead>
                         <TableHead>Created Date</TableHead>
-                        <TableHead className="w-[140px]">Action</TableHead>
+                        <TableHead className="w-[220px]">Action</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -234,14 +316,14 @@ export default function SetupSuperAdmin() {
                           <TableCell className="font-medium">{inst.name}</TableCell>
                           <TableCell>{formatDateTime(inst.created_at)}</TableCell>
                           <TableCell>
-                            <Button
-                              size="sm"
-                              variant="secondary"
-                              onClick={() => manageInstitution(inst.id)}
-                              disabled={loading}
-                            >
-                              Manage
-                            </Button>
+                            <div className="flex items-center gap-2">
+                              <Button size="sm" variant="secondary" onClick={() => manageInstitution(inst.id)} disabled={loading}>
+                                Manage
+                              </Button>
+                              <Button size="sm" variant="destructive" onClick={() => setDeleteTarget(inst)} disabled={loading}>
+                                Delete
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -256,6 +338,39 @@ export default function SetupSuperAdmin() {
                     </TableBody>
                   </Table>
                 </div>
+
+                <AlertDialog
+                  open={!!deleteTarget}
+                  onOpenChange={(open) => {
+                    if (!open) setDeleteTarget(null);
+                  }}
+                >
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete institution?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This will permanently delete the institution <span className="font-medium">{deleteTarget?.name}</span>.
+                        Deletion is only allowed when there are no staff, roster entries, or leave requests under it.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+
+                    {deleteChecking ? <p className="text-sm text-muted-foreground">Checking for dependent data…</p> : null}
+
+                    <AlertDialogFooter>
+                      <AlertDialogCancel disabled={loading}>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={(e) => {
+                          e.preventDefault();
+                          if (deleteTarget) void deleteInstitution(deleteTarget);
+                        }}
+                        disabled={loading || deleteChecking || !deleteTarget}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      >
+                        {loading ? "Deleting…" : "Delete"}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </CardContent>
             </Card>
           ) : null}
