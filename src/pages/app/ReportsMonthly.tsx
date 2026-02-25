@@ -163,9 +163,10 @@ export default function ReportsMonthly() {
       <Card className="print:shadow-none">
         <CardHeader className="print:pb-2">
           <CardTitle className="text-lg">
-            {institutionName || "Institution"} — {format(parseISO(`${month}-01`), "MMMM yyyy")}
+            <span className="print:hidden">{institutionName || "Institution"} — </span>
+            {format(parseISO(`${month}-01`), "MMMM yyyy")}
           </CardTitle>
-          <p className="text-xs text-muted-foreground">Casual quota (yearly): {quota}</p>
+          <p className="text-xs text-muted-foreground print:hidden">Casual quota (yearly): {quota}</p>
         </CardHeader>
         <CardContent className="overflow-x-auto print:overflow-visible">
           <table className="w-full min-w-[820px] text-sm">
