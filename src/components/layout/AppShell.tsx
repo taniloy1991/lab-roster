@@ -23,6 +23,7 @@ export function AppShell() {
       { to: "/app/me", label: "My Panel", icon: <Home className="h-4 w-4" />, when: "staff" },
       { to: "/app/staff", label: "Staff", icon: <Users className="h-4 w-4" />, when: "lab" },
       { to: "/app/holidays", label: "Holidays", icon: <CalendarDays className="h-4 w-4" />, when: "lab" },
+      { to: "/app/leaves", label: "Leaves", icon: <ClipboardList className="h-4 w-4" />, when: "lab" },
       { to: "/app/roster", label: "Roster", icon: <ClipboardList className="h-4 w-4" />, when: "any" },
       { to: "/app/reports/monthly", label: "Monthly Report", icon: <Printer className="h-4 w-4" />, when: "lab" },
     ],
