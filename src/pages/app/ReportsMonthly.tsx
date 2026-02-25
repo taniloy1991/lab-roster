@@ -145,7 +145,9 @@ export default function ReportsMonthly() {
 
   return (
     <>
-      <AppPrintHeader />
+      <div className="pdf-header hidden print:block mb-6">
+        <AppPrintHeader />
+      </div>
       <div className="space-y-6">
       <header className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between print:hidden">
         <div>

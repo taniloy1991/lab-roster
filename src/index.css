@@ -104,30 +104,31 @@
     @apply bg-background text-foreground;
   }
 
-  /* Print/PDF header + footer: fixed on print, hidden on screen */
-  .app-print-header,
+  /* Print/PDF helpers */
+  .pdf-header {
+    display: none;
+  }
+
   .app-print-footer {
     display: none;
   }
 
   @media print {
-    /* Make sure there's room for the fixed header + footer */
+    /* Let the PDF header participate in normal flow (no fixed/absolute),
+       and keep a clear gap before content. */
+    .pdf-header {
+      display: block;
+      margin-bottom: 24px;
+    }
+
+    /* Make sure there's room for the fixed footer */
     body {
-      padding-top: 26mm;
+      padding-top: 0;
       padding-bottom: 18mm;
     }
 
     .app-screen-footer {
       display: none !important;
-    }
-
-    .app-print-header {
-      display: block;
-      position: fixed;
-      left: 0;
-      right: 0;
-      top: 10mm;
-      z-index: 9999;
     }
 
     .app-print-footer {
