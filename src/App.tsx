@@ -17,6 +17,7 @@ import Signup from "./pages/auth/Signup";
 
 import AppHome from "./pages/app/AppHome";
 import SetupSuperAdmin from "./pages/app/SetupSuperAdmin";
+import InstitutionDashboard from "./pages/app/InstitutionDashboard";
 import LabDashboard from "./pages/app/LabDashboard";
 import StaffDashboard from "./pages/app/StaffDashboard";
 import StaffManagement from "./pages/app/StaffManagement";
@@ -48,6 +49,14 @@ const App = () => (
             >
               <Route index element={<AppHome />} />
               <Route path="setup" element={<SetupSuperAdmin />} />
+              <Route
+                path="institution"
+                element={
+                  <RoleGate requireGlobalRole="super_admin">
+                    <InstitutionDashboard />
+                  </RoleGate>
+                }
+              />
 
               <Route
                 path="lab"
