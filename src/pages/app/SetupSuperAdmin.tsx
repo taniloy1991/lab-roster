@@ -52,6 +52,9 @@ export default function SetupSuperAdmin() {
   const [deleteTarget, setDeleteTarget] = useState<InstitutionRow | null>(null);
   const [deleteChecking, setDeleteChecking] = useState(false);
 
+  const [membershipChecking, setMembershipChecking] = useState(false);
+  const [hasInstitutionMembership, setHasInstitutionMembership] = useState(false);
+
   const isSuperAdmin = globalRoles.includes("super_admin");
 
   const canClaim = useMemo(() => !!userId && !isSuperAdmin, [userId, isSuperAdmin]);
@@ -81,31 +84,38 @@ export default function SetupSuperAdmin() {
     setStatus(null);
   }, [userId]);
 
-  // If the user is already assigned to any institution, they shouldn't see the Super Admin claim screen.
+  // If the user is already assigned to any institution, they shouldn't see the Setup/claim screen.
   useEffect(() => {
     if (!userId) return;
-    if (isSuperAdmin) return;
 
     let cancelled = false;
 
     (async () => {
-      const res = await supabase
-        .from("institution_users")
-        .select("id")
-        .eq("user_id", userId)
-        .limit(1);
+      setMembershipChecking(true);
+      try {
+        const res = await supabase
+          .from("institution_users")
+          .select("id")
+          .eq("user_id", userId)
+          .limit(1);
 
-      if (cancelled) return;
+        if (cancelled) return;
 
-      if (!res.error && (res.data?.length ?? 0) > 0) {
-        navigate("/app", { replace: true });
+        const hasMembership = !res.error && (res.data?.length ?? 0) > 0;
+        setHasInstitutionMembership(hasMembership);
+
+        if (hasMembership) {
+          navigate("/app", { replace: true });
+        }
+      } finally {
+        if (!cancelled) setMembershipChecking(false);
       }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [userId, isSuperAdmin, navigate]);
+  }, [userId, navigate]);
 
   useEffect(() => {
     fetchInstitutions();
@@ -252,6 +262,8 @@ export default function SetupSuperAdmin() {
       setLoading(false);
     }
   };
+
+  if (membershipChecking || hasInstitutionMembership) return null;
 
   return (
     <div className="space-y-6">
