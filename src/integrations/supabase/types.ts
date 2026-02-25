@@ -462,6 +462,7 @@ export type Database = {
       roster_shift_assignments: {
         Row: {
           created_at: string
+          duty_note: string | null
           id: string
           is_extra: boolean
           roster_day_id: string
@@ -470,6 +471,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          duty_note?: string | null
           id?: string
           is_extra?: boolean
           roster_day_id: string
@@ -478,6 +480,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          duty_note?: string | null
           id?: string
           is_extra?: boolean
           roster_day_id?: string
