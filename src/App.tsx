@@ -23,6 +23,7 @@ import StaffDashboard from "./pages/app/StaffDashboard";
 import StaffManagement from "./pages/app/StaffManagement";
 import HolidaysCalendar from "./pages/app/HolidaysCalendar";
 import RosterCalendar from "./pages/app/RosterCalendar";
+import LeaveManagement from "./pages/app/LeaveManagement";
 import ReportsMonthly from "./pages/app/ReportsMonthly";
 
 const queryClient = new QueryClient();
@@ -88,6 +89,14 @@ const App = () => (
                 element={
                   <RoleGate requireAnyInstitutionRole={["lab_incharge"]}>
                     <HolidaysCalendar />
+                  </RoleGate>
+                }
+              />
+              <Route
+                path="leaves"
+                element={
+                  <RoleGate requireAnyInstitutionRole={["lab_incharge"]}>
+                    <LeaveManagement />
                   </RoleGate>
                 }
               />

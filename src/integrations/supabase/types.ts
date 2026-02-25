@@ -51,6 +51,27 @@ export type Database = {
             foreignKeyName: "casual_leave_ledger_staff_id_fkey"
             columns: ["staff_id"]
             isOneToOne: false
+            referencedRelation: "cl_balance_view"
+            referencedColumns: ["staff_id"]
+          },
+          {
+            foreignKeyName: "casual_leave_ledger_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "monthly_leave_summary"
+            referencedColumns: ["staff_id"]
+          },
+          {
+            foreignKeyName: "casual_leave_ledger_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "off_balance_view"
+            referencedColumns: ["staff_id"]
+          },
+          {
+            foreignKeyName: "casual_leave_ledger_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
             referencedRelation: "staff"
             referencedColumns: ["id"]
           },
@@ -94,6 +115,27 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "institutions"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compensatory_off_ledger_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "cl_balance_view"
+            referencedColumns: ["staff_id"]
+          },
+          {
+            foreignKeyName: "compensatory_off_ledger_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "monthly_leave_summary"
+            referencedColumns: ["staff_id"]
+          },
+          {
+            foreignKeyName: "compensatory_off_ledger_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "off_balance_view"
+            referencedColumns: ["staff_id"]
           },
           {
             foreignKeyName: "compensatory_off_ledger_staff_id_fkey"
@@ -197,18 +239,21 @@ export type Database = {
           created_at: string
           id: string
           institution_id: string
+          role: string | null
           user_id: string
         }
         Insert: {
           created_at?: string
           id?: string
           institution_id: string
+          role?: string | null
           user_id: string
         }
         Update: {
           created_at?: string
           id?: string
           institution_id?: string
+          role?: string | null
           user_id?: string
         }
         Relationships: [
@@ -297,6 +342,27 @@ export type Database = {
             foreignKeyName: "leave_requests_staff_id_fkey"
             columns: ["staff_id"]
             isOneToOne: false
+            referencedRelation: "cl_balance_view"
+            referencedColumns: ["staff_id"]
+          },
+          {
+            foreignKeyName: "leave_requests_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "monthly_leave_summary"
+            referencedColumns: ["staff_id"]
+          },
+          {
+            foreignKeyName: "leave_requests_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "off_balance_view"
+            referencedColumns: ["staff_id"]
+          },
+          {
+            foreignKeyName: "leave_requests_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
             referencedRelation: "staff"
             referencedColumns: ["id"]
           },
@@ -343,6 +409,8 @@ export type Database = {
           duty_date: string
           id: string
           institution_id: string
+          is_friday: boolean | null
+          is_govt_holiday: boolean | null
           updated_at: string
         }
         Insert: {
@@ -350,6 +418,8 @@ export type Database = {
           duty_date: string
           id?: string
           institution_id: string
+          is_friday?: boolean | null
+          is_govt_holiday?: boolean | null
           updated_at?: string
         }
         Update: {
@@ -357,6 +427,8 @@ export type Database = {
           duty_date?: string
           id?: string
           institution_id?: string
+          is_friday?: boolean | null
+          is_govt_holiday?: boolean | null
           updated_at?: string
         }
         Relationships: [
@@ -401,6 +473,27 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "roster_days"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "roster_shift_assignments_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "cl_balance_view"
+            referencedColumns: ["staff_id"]
+          },
+          {
+            foreignKeyName: "roster_shift_assignments_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "monthly_leave_summary"
+            referencedColumns: ["staff_id"]
+          },
+          {
+            foreignKeyName: "roster_shift_assignments_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "off_balance_view"
+            referencedColumns: ["staff_id"]
           },
           {
             foreignKeyName: "roster_shift_assignments_staff_id_fkey"
@@ -486,7 +579,38 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      cl_balance_view: {
+        Row: {
+          cl_remaining: number | null
+          cl_used: number | null
+          name: string | null
+          staff_id: string | null
+        }
+        Relationships: []
+      }
+      monthly_leave_summary: {
+        Row: {
+          cl_remaining: number | null
+          cl_used: number | null
+          month: string | null
+          name: string | null
+          off_balance: number | null
+          off_earned: number | null
+          off_used: number | null
+          staff_id: string | null
+        }
+        Relationships: []
+      }
+      off_balance_view: {
+        Row: {
+          earned_off: number | null
+          name: string | null
+          off_balance: number | null
+          staff_id: string | null
+          used_off: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       get_my_institution_id: { Args: never; Returns: string }
