@@ -14,6 +14,76 @@ export type Database = {
   }
   public: {
     Tables: {
+      casual_leave_ledger: {
+        Row: {
+          created_at: string
+          id: string
+          leave_date: string
+          staff_id: string
+          year: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          leave_date: string
+          staff_id: string
+          year: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          leave_date?: string
+          staff_id?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "casual_leave_ledger_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      compensatory_off_ledger: {
+        Row: {
+          created_at: string
+          duty_date: string
+          entry_type: string
+          id: string
+          notes: string | null
+          source_type: string | null
+          staff_id: string
+        }
+        Insert: {
+          created_at?: string
+          duty_date: string
+          entry_type: string
+          id?: string
+          notes?: string | null
+          source_type?: string | null
+          staff_id: string
+        }
+        Update: {
+          created_at?: string
+          duty_date?: string
+          entry_type?: string
+          id?: string
+          notes?: string | null
+          source_type?: string | null
+          staff_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compensatory_off_ledger_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       global_user_roles: {
         Row: {
           created_at: string
