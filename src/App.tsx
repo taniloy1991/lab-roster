@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/providers/AuthProvider";
 import { RequireAuth } from "@/components/auth/RequireAuth";
 import { RoleGate } from "@/components/auth/RoleGate";
+import { RequireNoInstitutionMembership } from "@/components/auth/RequireNoInstitutionMembership";
 import { AppShell } from "@/components/layout/AppShell";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
@@ -50,7 +51,14 @@ const App = () => (
                   }
                 >
                   <Route index element={<AppHome />} />
-                  <Route path="setup" element={<SetupSuperAdmin />} />
+                  <Route
+                    path="setup"
+                    element={
+                      <RequireNoInstitutionMembership>
+                        <SetupSuperAdmin />
+                      </RequireNoInstitutionMembership>
+                    }
+                  />
                   <Route
                     path="institution"
                     element={
