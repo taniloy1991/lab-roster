@@ -7,17 +7,51 @@ import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useAuth } from "@/providers/AuthProvider";
 
 type NavItem = { to: string; label: string; icon: React.ReactNode; when?: "lab" | "staff" | "any" };
 
+type InstitutionOption = { id: string; name: string };
+
 export function AppShell() {
-  const { signOut, institutionRoles, globalRoles, activeInstitutionId } = useAuth();
+  const { signOut, refresh, userId, institutionRoles, globalRoles, activeInstitutionId } = useAuth();
   const navigate = useNavigate();
 
   const isSuperAdmin = globalRoles.includes("super_admin");
   const isLab = institutionRoles.includes("lab_incharge");
   const isStaff = institutionRoles.includes("staff");
+
+  const { data: myInstitutions } = useQuery({
+    queryKey: ["institutions", "assigned", userId],
+    enabled: isSuperAdmin && !!userId,
+    queryFn: async () => {
+      if (!userId) return [] as InstitutionOption[];
+
+      const res = await supabase
+        .from("institution_users")
+        .select("institution_id, institutions(id, name)")
+        .eq("user_id", userId);
+
+      const opts = (res.data ?? [])
+        .map((row) => {
+          const inst = (row as any).institutions as { id: string; name: string } | null;
+          return inst ? { id: inst.id, name: inst.name } : null;
+        })
+        .filter(Boolean) as InstitutionOption[];
+
+      // stable sort for UX
+      opts.sort((a, b) => a.name.localeCompare(b.name));
+      return opts;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
 
   const { data: institutionName } = useQuery({
     queryKey: ["institutions", "name", activeInstitutionId],
@@ -83,13 +117,42 @@ export function AppShell() {
           <Card className="h-full overflow-hidden">
             <div className="flex h-full flex-col">
               <div className="border-b p-5">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
                     <p className="text-xs font-medium text-muted-foreground">Laboratory Roaster Management</p>
                     {institutionName ? (
-                      <p className="mt-1 text-xs font-medium text-foreground/80">{institutionName}</p>
+                      <p className="mt-1 truncate text-xs font-medium text-foreground/80">{institutionName}</p>
                     ) : null}
                     <h1 className="text-base font-semibold tracking-tight">Dashboard</h1>
+
+                    {isSuperAdmin && (myInstitutions?.length ?? 0) > 0 ? (
+                      <div className="mt-3">
+                        <p className="mb-1 text-[11px] font-medium text-muted-foreground">Institution</p>
+                        <Select
+                          value={activeInstitutionId ?? ""}
+                          onValueChange={async (nextId) => {
+                            if (!userId) return;
+                            await supabase
+                              .from("profiles")
+                              .update({ active_institution_id: nextId })
+                              .eq("user_id", userId);
+                            await refresh();
+                            navigate("/app", { replace: true });
+                          }}
+                        >
+                          <SelectTrigger className="h-9">
+                            <SelectValue placeholder="Select institution" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {myInstitutions?.map((inst) => (
+                              <SelectItem key={inst.id} value={inst.id}>
+                                {inst.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    ) : null}
                   </div>
                   {isSuperAdmin && (
                     <span className="rounded-md bg-accent px-2 py-1 text-xs font-medium text-accent-foreground">Super Admin</span>
