@@ -14,6 +14,24 @@ export type Database = {
   }
   public: {
     Tables: {
+      app_settings: {
+        Row: {
+          id: string
+          setting_key: string | null
+          setting_value: string | null
+        }
+        Insert: {
+          id?: string
+          setting_key?: string | null
+          setting_value?: string | null
+        }
+        Update: {
+          id?: string
+          setting_key?: string | null
+          setting_value?: string | null
+        }
+        Relationships: []
+      }
       casual_leave_ledger: {
         Row: {
           created_at: string

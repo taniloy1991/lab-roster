@@ -104,19 +104,30 @@
     @apply bg-background text-foreground;
   }
 
-  /* Print/PDF footer: fixed at bottom, hidden on screen */
+  /* Print/PDF header + footer: fixed on print, hidden on screen */
+  .app-print-header,
   .app-print-footer {
     display: none;
   }
 
   @media print {
-    /* Make sure there's room for the fixed footer */
+    /* Make sure there's room for the fixed header + footer */
     body {
+      padding-top: 26mm;
       padding-bottom: 18mm;
     }
 
     .app-screen-footer {
       display: none !important;
+    }
+
+    .app-print-header {
+      display: block;
+      position: fixed;
+      left: 0;
+      right: 0;
+      top: 10mm;
+      z-index: 9999;
     }
 
     .app-print-footer {
