@@ -3,6 +3,7 @@ import { endOfMonth, format, parseISO, startOfMonth } from "date-fns";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/providers/AuthProvider";
+import { AppPrintHeader } from "@/components/print/AppPrintHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -143,7 +144,9 @@ export default function ReportsMonthly() {
   }, [activeInstitutionId, month]);
 
   return (
-    <div className="space-y-6">
+    <>
+      <AppPrintHeader />
+      <div className="space-y-6">
       <header className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between print:hidden">
         <div>
           <h2 className="text-2xl font-semibold tracking-tight">Monthly Leave & OFF Balance Overview</h2>
@@ -203,5 +206,6 @@ export default function ReportsMonthly() {
         </CardContent>
       </Card>
     </div>
+    </>
   );
 }
