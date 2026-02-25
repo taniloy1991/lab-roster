@@ -18,6 +18,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          institution_id: string
           leave_date: string
           staff_id: string
           year: number
@@ -25,6 +26,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          institution_id: string
           leave_date: string
           staff_id: string
           year: number
@@ -32,11 +34,19 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          institution_id?: string
           leave_date?: string
           staff_id?: string
           year?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "casual_leave_ledger_institution_id_fkey"
+            columns: ["institution_id"]
+            isOneToOne: false
+            referencedRelation: "institutions"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "casual_leave_ledger_staff_id_fkey"
             columns: ["staff_id"]
@@ -52,6 +62,7 @@ export type Database = {
           duty_date: string
           entry_type: string
           id: string
+          institution_id: string
           notes: string | null
           source_type: string | null
           staff_id: string
@@ -61,6 +72,7 @@ export type Database = {
           duty_date: string
           entry_type: string
           id?: string
+          institution_id: string
           notes?: string | null
           source_type?: string | null
           staff_id: string
@@ -70,11 +82,19 @@ export type Database = {
           duty_date?: string
           entry_type?: string
           id?: string
+          institution_id?: string
           notes?: string | null
           source_type?: string | null
           staff_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "compensatory_off_ledger_institution_id_fkey"
+            columns: ["institution_id"]
+            isOneToOne: false
+            referencedRelation: "institutions"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "compensatory_off_ledger_staff_id_fkey"
             columns: ["staff_id"]
@@ -275,57 +295,6 @@ export type Database = {
           },
           {
             foreignKeyName: "leave_requests_staff_id_fkey"
-            columns: ["staff_id"]
-            isOneToOne: false
-            referencedRelation: "staff"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      off_ledger: {
-        Row: {
-          amount: number
-          created_at: string
-          created_by: string | null
-          entry_date: string
-          entry_type: Database["public"]["Enums"]["off_ledger_type"]
-          id: string
-          institution_id: string
-          note: string | null
-          staff_id: string
-        }
-        Insert: {
-          amount?: number
-          created_at?: string
-          created_by?: string | null
-          entry_date: string
-          entry_type: Database["public"]["Enums"]["off_ledger_type"]
-          id?: string
-          institution_id: string
-          note?: string | null
-          staff_id: string
-        }
-        Update: {
-          amount?: number
-          created_at?: string
-          created_by?: string | null
-          entry_date?: string
-          entry_type?: Database["public"]["Enums"]["off_ledger_type"]
-          id?: string
-          institution_id?: string
-          note?: string | null
-          staff_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "off_ledger_institution_id_fkey"
-            columns: ["institution_id"]
-            isOneToOne: false
-            referencedRelation: "institutions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "off_ledger_staff_id_fkey"
             columns: ["staff_id"]
             isOneToOne: false
             referencedRelation: "staff"
