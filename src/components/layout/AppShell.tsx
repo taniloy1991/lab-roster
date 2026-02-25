@@ -1,0 +1,127 @@
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { CalendarDays, ClipboardList, Home, LogOut, Printer, Users } from "lucide-react";
+
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { useAuth } from "@/providers/AuthProvider";
+
+type NavItem = { to: string; label: string; icon: React.ReactNode; when?: "lab" | "staff" | "any" };
+
+export function AppShell() {
+  const { signOut, institutionRoles, globalRoles } = useAuth();
+  const navigate = useNavigate();
+
+  const isSuperAdmin = globalRoles.includes("super_admin");
+  const isLab = institutionRoles.includes("lab_incharge");
+  const isStaff = institutionRoles.includes("staff");
+
+  const items: NavItem[] = useMemo(
+    () => [
+      { to: "/app", label: "Overview", icon: <Home className="h-4 w-4" />, when: "any" },
+      { to: "/app/me", label: "My Panel", icon: <Home className="h-4 w-4" />, when: "staff" },
+      { to: "/app/staff", label: "Staff", icon: <Users className="h-4 w-4" />, when: "lab" },
+      { to: "/app/holidays", label: "Holidays", icon: <CalendarDays className="h-4 w-4" />, when: "lab" },
+      { to: "/app/roster", label: "Roster", icon: <ClipboardList className="h-4 w-4" />, when: "any" },
+      { to: "/app/reports/monthly", label: "Monthly Report", icon: <Printer className="h-4 w-4" />, when: "lab" },
+    ],
+    [],
+  );
+
+  const visibleItems = items.filter((it) => {
+    if (it.when === "any") return true;
+    if (it.when === "lab") return isLab;
+    if (it.when === "staff") return isStaff;
+    return true;
+  });
+
+  // Signature moment: subtle spotlight background following pointer
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const [spot, setSpot] = useState({ x: 50, y: 20 });
+
+  useEffect(() => {
+    const el = rootRef.current;
+    if (!el) return;
+
+    const onMove = (e: PointerEvent) => {
+      const rect = el.getBoundingClientRect();
+      const x = ((e.clientX - rect.left) / rect.width) * 100;
+      const y = ((e.clientY - rect.top) / rect.height) * 100;
+      setSpot({ x: Math.max(0, Math.min(100, x)), y: Math.max(0, Math.min(100, y)) });
+    };
+
+    el.addEventListener("pointermove", onMove);
+    return () => el.removeEventListener("pointermove", onMove);
+  }, []);
+
+  return (
+    <div
+      ref={rootRef}
+      className="min-h-screen bg-background"
+      style={{
+        // Uses semantic tokens via CSS variables
+        backgroundImage: `radial-gradient(900px circle at ${spot.x}% ${spot.y}%, hsl(var(--spotlight) / 0.12), transparent 55%), radial-gradient(700px circle at 85% 10%, hsl(var(--accent) / 0.10), transparent 45%)`,
+      }}
+    >
+      <div className="mx-auto grid min-h-screen max-w-7xl grid-cols-1 gap-6 p-4 md:grid-cols-[280px_1fr] md:p-6">
+        <aside className="md:sticky md:top-6 md:h-[calc(100vh-3rem)]">
+          <Card className="h-full overflow-hidden">
+            <div className="flex h-full flex-col">
+              <div className="border-b p-5">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground">Laboratory Roaster Management</p>
+                    <h1 className="text-base font-semibold tracking-tight">Dashboard</h1>
+                  </div>
+                  {isSuperAdmin && (
+                    <span className="rounded-md bg-accent px-2 py-1 text-xs font-medium text-accent-foreground">Super Admin</span>
+                  )}
+                </div>
+              </div>
+
+              <nav className="flex flex-1 flex-col gap-1 p-3">
+                {visibleItems.map((it) => (
+                  <NavLink
+                    key={it.to}
+                    to={it.to}
+                    className={({ isActive }) =>
+                      cn(
+                        "flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors",
+                        isActive
+                          ? "bg-accent text-accent-foreground"
+                          : "text-muted-foreground hover:bg-accent/60 hover:text-accent-foreground",
+                      )
+                    }
+                    end={it.to === "/app"}
+                  >
+                    {it.icon}
+                    {it.label}
+                  </NavLink>
+                ))}
+              </nav>
+
+              <div className="border-t p-3">
+                <Button
+                  variant="outline"
+                  className="w-full justify-start"
+                  onClick={async () => {
+                    await signOut();
+                    navigate("/login");
+                  }}
+                >
+                  <LogOut className="h-4 w-4" />
+                  Sign out
+                </Button>
+              </div>
+            </div>
+          </Card>
+        </aside>
+
+        <main className="min-w-0">
+          <Outlet />
+        </main>
+      </div>
+    </div>
+  );
+}
