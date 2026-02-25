@@ -103,4 +103,30 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Print/PDF footer: fixed at bottom, hidden on screen */
+  .app-print-footer {
+    display: none;
+  }
+
+  @media print {
+    /* Make sure there's room for the fixed footer */
+    body {
+      padding-bottom: 18mm;
+    }
+
+    .app-screen-footer {
+      display: none !important;
+    }
+
+    .app-print-footer {
+      display: block;
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 10mm;
+      z-index: 9999;
+      color: hsl(var(--muted-foreground));
+    }
+  }
 }
