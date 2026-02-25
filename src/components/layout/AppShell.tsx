@@ -1,7 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { CalendarDays, ClipboardList, Home, LogOut, Printer, Users } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 
+import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -10,12 +12,23 @@ import { useAuth } from "@/providers/AuthProvider";
 type NavItem = { to: string; label: string; icon: React.ReactNode; when?: "lab" | "staff" | "any" };
 
 export function AppShell() {
-  const { signOut, institutionRoles, globalRoles } = useAuth();
+  const { signOut, institutionRoles, globalRoles, activeInstitutionId } = useAuth();
   const navigate = useNavigate();
 
   const isSuperAdmin = globalRoles.includes("super_admin");
   const isLab = institutionRoles.includes("lab_incharge");
   const isStaff = institutionRoles.includes("staff");
+
+  const { data: institutionName } = useQuery({
+    queryKey: ["institutions", "name", activeInstitutionId],
+    enabled: !!activeInstitutionId,
+    queryFn: async () => {
+      if (!activeInstitutionId) return null;
+      const res = await supabase.from("institutions").select("name").eq("id", activeInstitutionId).maybeSingle();
+      return res.data?.name ?? null;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
 
   const items: NavItem[] = useMemo(
     () => [
@@ -73,6 +86,9 @@ export function AppShell() {
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <p className="text-xs font-medium text-muted-foreground">Laboratory Roaster Management</p>
+                    {institutionName ? (
+                      <p className="mt-1 text-xs font-medium text-foreground/80">{institutionName}</p>
+                    ) : null}
                     <h1 className="text-base font-semibold tracking-tight">Dashboard</h1>
                   </div>
                   {isSuperAdmin && (
@@ -126,3 +142,4 @@ export function AppShell() {
     </div>
   );
 }
+
