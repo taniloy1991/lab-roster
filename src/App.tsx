@@ -8,8 +8,6 @@ import { AuthProvider } from "@/providers/AuthProvider";
 import { RequireAuth } from "@/components/auth/RequireAuth";
 import { RoleGate } from "@/components/auth/RoleGate";
 import { AppShell } from "@/components/layout/AppShell";
-import { AppPrintHeader } from "@/components/print/AppPrintHeader";
-
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 
@@ -36,10 +34,7 @@ const App = () => (
       <Sonner />
       <AuthProvider>
         <BrowserRouter>
-          <div className="min-h-screen flex flex-col">
-            {/* Print/PDF header (fixed to page top) */}
-            <AppPrintHeader />
-
+            <div className="min-h-screen flex flex-col">
             <div className="flex-1">
               <Routes>
                 <Route path="/" element={<Index />} />
