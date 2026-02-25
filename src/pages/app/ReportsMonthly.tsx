@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 
 type StaffRow = { id: string; name: string };
 
-type OffRow = { staff_id: string; entry_type: "earn" | "use"; amount: number };
+type OffLedgerRow = { staff_id: string; entry_type: "earn" | "use" };
 
 type DutyRow = { staff_id: string; roster_day_id: string };
 
@@ -61,13 +61,13 @@ export default function ReportsMonthly() {
     const staffIds = staff.map((s) => s.id);
 
     const offRes = await supabase
-      .from("off_ledger")
-      .select("staff_id,entry_type,amount")
+      .from("compensatory_off_ledger")
+      .select("staff_id,entry_type")
       .eq("institution_id", activeInstitutionId)
-      .gte("entry_date", format(range.start, "yyyy-MM-dd"))
-      .lte("entry_date", format(range.end, "yyyy-MM-dd"))
+      .gte("duty_date", format(range.start, "yyyy-MM-dd"))
+      .lte("duty_date", format(range.end, "yyyy-MM-dd"))
       .in("staff_id", staffIds.length ? staffIds : ["00000000-0000-0000-0000-000000000000"]);
-    const offRows = (offRes.data ?? []) as OffRow[];
+    const offRows = (offRes.data ?? []) as OffLedgerRow[];
 
     const dutyRes = await supabase
       .from("roster_shift_assignments")
@@ -103,8 +103,8 @@ export default function ReportsMonthly() {
     const offByStaff = new Map<string, { earn: number; use: number }>();
     for (const r of offRows) {
       const cur = offByStaff.get(r.staff_id) ?? { earn: 0, use: 0 };
-      if (r.entry_type === "earn") cur.earn += Number(r.amount);
-      else cur.use += Number(r.amount);
+      if (r.entry_type === "earn") cur.earn += 1;
+      else cur.use += 1;
       offByStaff.set(r.staff_id, cur);
     }
 
