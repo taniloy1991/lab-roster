@@ -81,6 +81,32 @@ export default function SetupSuperAdmin() {
     setStatus(null);
   }, [userId]);
 
+  // If the user is already assigned to any institution, they shouldn't see the Super Admin claim screen.
+  useEffect(() => {
+    if (!userId) return;
+    if (isSuperAdmin) return;
+
+    let cancelled = false;
+
+    (async () => {
+      const res = await supabase
+        .from("institution_users")
+        .select("id")
+        .eq("user_id", userId)
+        .limit(1);
+
+      if (cancelled) return;
+
+      if (!res.error && (res.data?.length ?? 0) > 0) {
+        navigate("/app", { replace: true });
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [userId, isSuperAdmin, navigate]);
+
   useEffect(() => {
     fetchInstitutions();
     // eslint-disable-next-line react-hooks/exhaustive-deps
