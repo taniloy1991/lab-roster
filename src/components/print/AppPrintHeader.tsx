@@ -25,10 +25,9 @@ export function AppPrintHeader() {
   if (!text) return null;
 
   return (
-    <div className="app-print-header">
-      <div className="mx-auto max-w-3xl px-4 text-center text-sm leading-tight text-foreground">
-        <div className="whitespace-pre-line font-medium">{text}</div>
-      </div>
+    <div className="mx-auto max-w-3xl px-4 text-center text-sm leading-tight text-foreground">
+      <div className="whitespace-pre-line font-medium">{text}</div>
     </div>
   );
 }
+
