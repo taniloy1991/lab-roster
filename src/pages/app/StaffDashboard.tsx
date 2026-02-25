@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 
 type StaffSelf = { id: string; name: string; designation: string | null };
 
-type OffRow = { entry_type: "earn" | "use"; amount: number };
+type OffLedgerRow = { entry_type: "earn" | "use" };
 
 type LeaveRow = { start_date: string; end_date: string; status: string; leave_type: "casual" | "off" };
 
@@ -40,10 +40,14 @@ export default function StaffDashboard() {
       return;
     }
 
-    const offRes = await supabase.from("off_ledger").select("entry_type,amount").eq("staff_id", staff.id);
-    const offRows = (offRes.data ?? []) as OffRow[];
-    const earn = offRows.filter((r) => r.entry_type === "earn").reduce((a, b) => a + Number(b.amount), 0);
-    const use = offRows.filter((r) => r.entry_type === "use").reduce((a, b) => a + Number(b.amount), 0);
+    const offRes = await supabase
+      .from("compensatory_off_ledger")
+      .select("entry_type")
+      .eq("institution_id", activeInstitutionId)
+      .eq("staff_id", staff.id);
+    const offRows = (offRes.data ?? []) as OffLedgerRow[];
+    const earn = offRows.filter((r) => r.entry_type === "earn").length;
+    const use = offRows.filter((r) => r.entry_type === "use").length;
     setOffBalance(earn - use);
 
     const leaveRes = await supabase.from("leave_requests").select("status").eq("staff_id", staff.id).eq("status", "pending");

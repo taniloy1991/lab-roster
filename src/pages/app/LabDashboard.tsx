@@ -10,7 +10,7 @@ import { Separator } from "@/components/ui/separator";
 
 type StaffRow = { id: string; name: string; designation: string | null; phone: string | null };
 
-type OffRow = { staff_id: string; entry_type: "earn" | "use"; amount: number };
+type OffLedgerRow = { staff_id: string; entry_type: "earn" | "use" }; 
 
 type LeaveRow = { staff_id: string; start_date: string; end_date: string; status: string; leave_type: "casual" | "off" };
 
@@ -69,14 +69,14 @@ export default function LabDashboard() {
     const staffIds = staff.map((s) => s.id);
 
     const offRes = await supabase
-      .from("off_ledger")
-      .select("staff_id,entry_type,amount")
+      .from("compensatory_off_ledger")
+      .select("staff_id,entry_type")
       .eq("institution_id", activeInstitutionId)
-      .gte("entry_date", format(range.start, "yyyy-MM-dd"))
-      .lte("entry_date", format(range.end, "yyyy-MM-dd"))
+      .gte("duty_date", format(range.start, "yyyy-MM-dd"))
+      .lte("duty_date", format(range.end, "yyyy-MM-dd"))
       .in("staff_id", staffIds.length ? staffIds : ["00000000-0000-0000-0000-000000000000"]);
 
-    const offRows = (offRes.data ?? []) as OffRow[];
+    const offRows = (offRes.data ?? []) as OffLedgerRow[];
 
     const leaveRes = await supabase
       .from("leave_requests")
@@ -118,8 +118,8 @@ export default function LabDashboard() {
     const offByStaff = new Map<string, { earn: number; use: number }>();
     for (const r of offRows) {
       const cur = offByStaff.get(r.staff_id) ?? { earn: 0, use: 0 };
-      if (r.entry_type === "earn") cur.earn += Number(r.amount);
-      else cur.use += Number(r.amount);
+      if (r.entry_type === "earn") cur.earn += 1;
+      else cur.use += 1;
       offByStaff.set(r.staff_id, cur);
     }
 
