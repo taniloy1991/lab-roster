@@ -105,7 +105,7 @@ export default function SetupSuperAdmin() {
         setHasInstitutionMembership(hasMembership);
 
         if (hasMembership) {
-          navigate("/app", { replace: true });
+          navigate("/app/dashboard", { replace: true });
         }
       } finally {
         if (!cancelled) setMembershipChecking(false);

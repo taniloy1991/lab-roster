@@ -39,7 +39,7 @@ export function RequireNoInstitutionMembership({ children }: { children: React.R
   // While we validate, don't render setup UI to avoid flicker.
   if (checking || hasMembership === null) return null;
 
-  if (hasMembership) return <Navigate to="/app" replace />;
+  if (hasMembership) return <Navigate to="/app/dashboard" replace />;
 
   return <>{children}</>;
 }

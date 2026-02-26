@@ -16,6 +16,7 @@ import Login from "./pages/auth/Login";
 import Signup from "./pages/auth/Signup";
 
 import AppHome from "./pages/app/AppHome";
+import DashboardLanding from "./pages/app/DashboardLanding";
 import SetupSuperAdmin from "./pages/app/SetupSuperAdmin";
 import InstitutionDashboard from "./pages/app/InstitutionDashboard";
 import LabDashboard from "./pages/app/LabDashboard";
@@ -51,6 +52,7 @@ const App = () => (
                   }
                 >
                   <Route index element={<AppHome />} />
+                  <Route path="dashboard" element={<DashboardLanding />} />
                   <Route
                     path="setup"
                     element={
