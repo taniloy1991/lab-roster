@@ -42,7 +42,7 @@ export default function Login() {
       return;
     }
 
-    navigate("/app", { replace: true });
+    navigate("/app/dashboard", { replace: true });
   };
 
   return (

@@ -10,16 +10,16 @@ export default function AppHome() {
   if (!session) return <Navigate to="/login" replace />;
 
   if (globalRoles.includes("super_admin") && !activeInstitutionId) {
-    // Super admin without institution context can still use setup
-    return <Navigate to="/app/setup" replace />;
+    // Resolve institution context without ever showing Setup UI for assigned users.
+    return <Navigate to="/app/dashboard" replace />;
   }
 
   if (!activeInstitutionId) {
-    return <Navigate to="/app/setup" replace />;
+    return <Navigate to="/app/dashboard" replace />;
   }
 
   if (institutionRoles.includes("lab_incharge")) return <Navigate to="/app/lab" replace />;
   if (institutionRoles.includes("staff")) return <Navigate to="/app/me" replace />;
 
-  return <Navigate to="/app/setup" replace />;
+  return <Navigate to="/app/dashboard" replace />;
 }
