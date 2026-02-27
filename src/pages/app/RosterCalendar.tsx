@@ -1,7 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
 
 import { useNavigate } from "react-router-dom";
+import { endOfMonth, format, parseISO, startOfMonth } from "date-fns";
 
+import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/providers/AuthProvider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,6 +13,11 @@ import { AssignmentDialog, type AssignmentDialogState } from "./roster/Assignmen
 import { RosterMonthTable } from "./roster/RosterMonthTable";
 import type { Shift } from "./roster/types";
 import { useRosterMonth } from "./roster/useRosterMonth";
+
+type LeaveGridRow = {
+  duty_date: string | null;
+  leave_staff: string | null;
+};
 
 export default function RosterCalendar() {
   const nav = useNavigate();
@@ -23,6 +30,12 @@ export default function RosterCalendar() {
     const mm = String(d.getMonth() + 1).padStart(2, "0");
     return `${yyyy}-${mm}`;
   });
+
+  const range = useMemo(() => {
+    const start = startOfMonth(parseISO(`${month}-01`));
+    const end = endOfMonth(start);
+    return { start, end };
+  }, [month]);
 
   const {
     loading,
@@ -43,43 +56,136 @@ export default function RosterCalendar() {
 
   const daysByDate = useMemo(() => new Map(days.map((d) => [d.duty_date, d])), [days]);
 
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [dialogState, setDialogState] = useState<AssignmentDialogState | null>(null);
-
-  const openAdd = (params: { dutyDate: string; shift: Shift }) => {
-    setDialogState({ mode: "add", dutyDate: params.dutyDate, shift: params.shift });
-    setDialogOpen(true);
-  };
-
-  const openEdit = (params: { dutyDate: string; shift: Shift; assignment: any }) => {
-    setDialogState({ mode: "edit", dutyDate: params.dutyDate, shift: params.shift, assignment: params.assignment });
-    setDialogOpen(true);
-  };
-
+  // Persisted selection (backend table selected_roster_dates)
   const [selectedDates, setSelectedDates] = useState<Set<string>>(() => new Set());
 
-  const toggleDate = (dutyDate: string) => {
+  const loadSelectedDates = async () => {
+    if (!activeInstitutionId) return;
+    const res = await supabase
+      .from("selected_roster_dates")
+      .select("duty_date")
+      .gte("duty_date", format(range.start, "yyyy-MM-dd"))
+      .lte("duty_date", format(range.end, "yyyy-MM-dd"));
+
+    const next = new Set((res.data ?? []).map((r) => r.duty_date));
+    setSelectedDates(next);
+  };
+
+  useEffect(() => {
+    void loadSelectedDates();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeInstitutionId, month]);
+
+  const toggleDate = async (dutyDate: string) => {
     setSelectedDates((prev) => {
       const next = new Set(prev);
       if (next.has(dutyDate)) next.delete(dutyDate);
       else next.add(dutyDate);
       return next;
     });
+
+    // Keep DB in sync (idempotent: delete then insert)
+    const exists = selectedDates.has(dutyDate);
+    if (exists) {
+      await supabase.from("selected_roster_dates").delete().eq("duty_date", dutyDate);
+    } else {
+      await supabase.from("selected_roster_dates").delete().eq("duty_date", dutyDate);
+      await supabase.from("selected_roster_dates").insert({ duty_date: dutyDate });
+    }
   };
 
-  const toggleAll = () => {
-    setSelectedDates((prev) => {
-      if (prev.size === monthDays.length) return new Set();
-      return new Set(monthDays);
-    });
+  const selectAll = async () => {
+    const dates = monthDays;
+    setSelectedDates(new Set(dates));
+    await supabase
+      .from("selected_roster_dates")
+      .delete()
+      .gte("duty_date", format(range.start, "yyyy-MM-dd"))
+      .lte("duty_date", format(range.end, "yyyy-MM-dd"));
+    if (dates.length) {
+      await supabase.from("selected_roster_dates").insert(dates.map((d) => ({ duty_date: d })));
+    }
   };
 
-  const exportToPdf = () => {
-    const dates = Array.from(selectedDates).sort().join(",");
+  const clearSelection = async () => {
+    setSelectedDates(new Set());
+    await supabase
+      .from("selected_roster_dates")
+      .delete()
+      .gte("duty_date", format(range.start, "yyyy-MM-dd"))
+      .lte("duty_date", format(range.end, "yyyy-MM-dd"));
+  };
+
+  const downloadSelectedPdf = () => {
     const qs = new URLSearchParams();
     qs.set("month", month);
-    if (dates) qs.set("dates", dates);
     nav(`/app/roster/print?${qs.toString()}`);
+  };
+
+  // Leave column data source: monthly_roster_grid.leave_staff
+  const [leaveByDate, setLeaveByDate] = useState<Map<string, string>>(new Map());
+
+  useEffect(() => {
+    if (!activeInstitutionId) return;
+    let cancelled = false;
+
+    (async () => {
+      const res = await supabase
+        .from("monthly_roster_grid")
+        .select("duty_date,leave_staff")
+        .gte("duty_date", format(range.start, "yyyy-MM-dd"))
+        .lte("duty_date", format(range.end, "yyyy-MM-dd"));
+
+      if (cancelled) return;
+
+      const map = new Map<string, string>();
+      for (const r of (res.data ?? []) as LeaveGridRow[]) {
+        if (!r.duty_date) continue;
+        const val = (r.leave_staff ?? "").trim();
+        if (val) map.set(r.duty_date, val);
+      }
+      setLeaveByDate(map);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeInstitutionId, range.end, range.start]);
+
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogState, setDialogState] = useState<AssignmentDialogState | null>(null);
+
+  const openAdd = async (params: { dutyDate: string; shift: Shift }) => {
+    // Determine who is on leave for this date (CL/OFF only); government holidays do not block.
+    const leaveRes = await supabase
+      .from("holidays")
+      .select("staff_id,holiday_type")
+      .eq("institution_id", activeInstitutionId)
+      .eq("holiday_date", params.dutyDate)
+      .in("holiday_type", ["casual", "general_off"]);
+
+    const leaveStaffIds = new Set(
+      ((leaveRes.data ?? []) as { staff_id: string | null }[]).map((r) => r.staff_id).filter(Boolean) as string[],
+    );
+
+    setDialogState({ mode: "add", dutyDate: params.dutyDate, shift: params.shift, leaveStaffIds });
+    setDialogOpen(true);
+  };
+
+  const openEdit = async (params: { dutyDate: string; shift: Shift; assignment: any }) => {
+    const leaveRes = await supabase
+      .from("holidays")
+      .select("staff_id,holiday_type")
+      .eq("institution_id", activeInstitutionId)
+      .eq("holiday_date", params.dutyDate)
+      .in("holiday_type", ["casual", "general_off"]);
+
+    const leaveStaffIds = new Set(
+      ((leaveRes.data ?? []) as { staff_id: string | null }[]).map((r) => r.staff_id).filter(Boolean) as string[],
+    );
+
+    setDialogState({ mode: "edit", dutyDate: params.dutyDate, shift: params.shift, assignment: params.assignment, leaveStaffIds });
+    setDialogOpen(true);
   };
 
   return (
@@ -91,10 +197,16 @@ export default function RosterCalendar() {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Input type="month" value={month} onChange={(e) => setMonth(e.target.value)} className="w-[190px]" />
-          <Button variant="outline" onClick={exportToPdf}>
-            Export Selected as PDF
+          <Button variant="secondary" onClick={selectAll} disabled={loading}>
+            Select All (Month)
           </Button>
-          <Button onClick={reload} disabled={loading}>
+          <Button variant="outline" onClick={clearSelection} disabled={loading}>
+            Clear Selection
+          </Button>
+          <Button variant="outline" onClick={downloadSelectedPdf}>
+            Download Selected as PDF
+          </Button>
+          <Button onClick={() => { reload(); void loadSelectedDates(); }} disabled={loading}>
             {loading ? "Loading…" : "Refresh"}
           </Button>
         </div>
@@ -122,10 +234,11 @@ export default function RosterCalendar() {
             staffName={staffName}
             canEdit={canEdit}
             selectedDates={selectedDates}
-            onToggleDate={toggleDate}
-            onToggleAll={toggleAll}
+            onToggleDate={(d) => void toggleDate(d)}
+            onToggleAll={() => void selectAll()}
             onAdd={openAdd}
             onEdit={openEdit}
+            leaveByDate={leaveByDate}
           />
         </CardContent>
       </Card>
