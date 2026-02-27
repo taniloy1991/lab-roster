@@ -1,6 +1,11 @@
 export type StaffRow = { id: string; name: string };
 
-export type RosterDay = { id: string; duty_date: string };
+export type RosterDay = {
+  id: string;
+  duty_date: string;
+  is_friday?: boolean | null;
+  is_govt_holiday?: boolean | null;
+};
 
 export type Shift = "morning" | "evening" | "night";
 

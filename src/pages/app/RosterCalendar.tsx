@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 
+import { useNavigate } from "react-router-dom";
+
 import { useAuth } from "@/providers/AuthProvider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,6 +13,7 @@ import type { Shift } from "./roster/types";
 import { useRosterMonth } from "./roster/useRosterMonth";
 
 export default function RosterCalendar() {
+  const nav = useNavigate();
   const { activeInstitutionId, institutionRoles } = useAuth();
   const canEdit = institutionRoles.includes("lab_incharge");
 
@@ -53,6 +56,32 @@ export default function RosterCalendar() {
     setDialogOpen(true);
   };
 
+  const [selectedDates, setSelectedDates] = useState<Set<string>>(() => new Set());
+
+  const toggleDate = (dutyDate: string) => {
+    setSelectedDates((prev) => {
+      const next = new Set(prev);
+      if (next.has(dutyDate)) next.delete(dutyDate);
+      else next.add(dutyDate);
+      return next;
+    });
+  };
+
+  const toggleAll = () => {
+    setSelectedDates((prev) => {
+      if (prev.size === monthDays.length) return new Set();
+      return new Set(monthDays);
+    });
+  };
+
+  const exportToPdf = () => {
+    const dates = Array.from(selectedDates).sort().join(",");
+    const qs = new URLSearchParams();
+    qs.set("month", month);
+    if (dates) qs.set("dates", dates);
+    nav(`/app/roster/print?${qs.toString()}`);
+  };
+
   return (
     <div className="space-y-6">
       <header className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
@@ -60,8 +89,11 @@ export default function RosterCalendar() {
           <h2 className="text-2xl font-semibold tracking-tight">Duty roster</h2>
           <p className="text-sm text-muted-foreground">Calendar-based, 3 shifts/day. Add notes per assignment.</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Input type="month" value={month} onChange={(e) => setMonth(e.target.value)} className="w-[190px]" />
+          <Button variant="outline" onClick={exportToPdf}>
+            Export Selected as PDF
+          </Button>
           <Button onClick={reload} disabled={loading}>
             {loading ? "Loading…" : "Refresh"}
           </Button>
@@ -70,10 +102,17 @@ export default function RosterCalendar() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Month view</CardTitle>
-          <CardDescription>
-            {canEdit ? "Click +Add or a staff chip to add/edit duty note." : "Read-only view for staff."}
-          </CardDescription>
+          <div className="flex flex-col gap-1 md:flex-row md:items-baseline md:justify-between">
+            <div>
+              <CardTitle className="text-lg">Month view</CardTitle>
+              <CardDescription>
+                {canEdit ? "Click +Add or a staff chip to add/edit duty note." : "Read-only view for staff."}
+              </CardDescription>
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {selectedDates.size ? `${selectedDates.size} selected` : "No date selected → exports full month"}
+            </div>
+          </div>
         </CardHeader>
         <CardContent className="overflow-x-auto">
           <RosterMonthTable
@@ -82,6 +121,9 @@ export default function RosterCalendar() {
             assignmentsByDayShift={byDayShift}
             staffName={staffName}
             canEdit={canEdit}
+            selectedDates={selectedDates}
+            onToggleDate={toggleDate}
+            onToggleAll={toggleAll}
             onAdd={openAdd}
             onEdit={openEdit}
           />
@@ -95,7 +137,9 @@ export default function RosterCalendar() {
         staff={staff}
         staffName={staffName}
         canEdit={canEdit}
-        onAdd={async ({ dutyDate, shift, staffId, isExtra, dutyNote }) => addAssignment({ dutyDate, shift, staffId, isExtra, dutyNote })}
+        onAdd={async ({ dutyDate, shift, staffId, isExtra, dutyNote }) =>
+          addAssignment({ dutyDate, shift, staffId, isExtra, dutyNote })
+        }
         onUpdate={async ({ assignmentId, dutyNote }) => updateDutyNote({ assignmentId, dutyNote })}
         onRemove={async (assignmentId) => removeAssignment(assignmentId)}
       />
