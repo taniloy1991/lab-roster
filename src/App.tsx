@@ -24,6 +24,7 @@ import StaffDashboard from "./pages/app/StaffDashboard";
 import StaffManagement from "./pages/app/StaffManagement";
 import HolidaysCalendar from "./pages/app/HolidaysCalendar";
 import RosterCalendar from "./pages/app/RosterCalendar";
+import RosterPrint from "./pages/app/RosterPrint";
 import LeaveManagement from "./pages/app/LeaveManagement";
 import ReportsMonthly from "./pages/app/ReportsMonthly";
 
@@ -116,6 +117,14 @@ const App = () => (
                     element={
                       <RoleGate requireAnyInstitutionRole={["lab_incharge", "staff"]}>
                         <RosterCalendar />
+                      </RoleGate>
+                    }
+                  />
+                  <Route
+                    path="roster/print"
+                    element={
+                      <RoleGate requireAnyInstitutionRole={["lab_incharge", "staff"]}>
+                        <RosterPrint />
                       </RoleGate>
                     }
                   />

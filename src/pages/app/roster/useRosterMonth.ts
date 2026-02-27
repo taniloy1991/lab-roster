@@ -38,7 +38,7 @@ export function useRosterMonth(params: { activeInstitutionId: string | null; mon
 
     const dayRes = await supabase
       .from("roster_days")
-      .select("id,duty_date")
+      .select("id,duty_date,is_friday,is_govt_holiday")
       .eq("institution_id", activeInstitutionId)
       .gte("duty_date", format(range.start, "yyyy-MM-dd"))
       .lte("duty_date", format(range.end, "yyyy-MM-dd"))
@@ -67,11 +67,11 @@ export function useRosterMonth(params: { activeInstitutionId: string | null; mon
       const existing = days.find((d) => d.duty_date === dutyDate);
       if (existing) return existing;
 
-      const ins = await supabase
-        .from("roster_days")
-        .insert({ institution_id: activeInstitutionId, duty_date: dutyDate })
-        .select("id,duty_date")
-        .single();
+       const ins = await supabase
+         .from("roster_days")
+         .insert({ institution_id: activeInstitutionId, duty_date: dutyDate })
+         .select("id,duty_date,is_friday,is_govt_holiday")
+         .single();
 
       if (ins.data) {
         setDays((prev) => [...prev, ins.data as RosterDay].sort((a, b) => a.duty_date.localeCompare(b.duty_date)));

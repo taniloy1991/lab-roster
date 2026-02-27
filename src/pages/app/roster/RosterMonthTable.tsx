@@ -1,6 +1,7 @@
-import React from "react";
+import React, { useMemo } from "react";
 
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 
 import type { Assignment, Shift } from "./types";
 
@@ -12,15 +13,47 @@ export function RosterMonthTable(props: {
   assignmentsByDayShift: Map<string, Assignment[]>;
   staffName: Map<string, string>;
   canEdit: boolean;
+  selectedDates: Set<string>;
+  onToggleDate: (dutyDate: string) => void;
+  onToggleAll: () => void;
   onAdd: (params: { dutyDate: string; shift: Shift }) => void;
   onEdit: (params: { dutyDate: string; shift: Shift; assignment: Assignment }) => void;
 }) {
-  const { monthDays, daysByDate, assignmentsByDayShift, staffName, canEdit, onAdd, onEdit } = props;
+  const {
+    monthDays,
+    daysByDate,
+    assignmentsByDayShift,
+    staffName,
+    canEdit,
+    selectedDates,
+    onToggleDate,
+    onToggleAll,
+    onAdd,
+    onEdit,
+  } = props;
+
+  const selection = useMemo(() => {
+    const total = monthDays.length;
+    const selected = monthDays.reduce((acc, d) => acc + (selectedDates.has(d) ? 1 : 0), 0);
+    return { total, selected };
+  }, [monthDays, selectedDates]);
+
+  const headerChecked: boolean | "indeterminate" =
+    selection.selected === 0 ? false : selection.selected === selection.total ? true : "indeterminate";
 
   return (
     <table className="w-full min-w-[980px] text-sm">
       <thead className="text-left text-xs text-muted-foreground">
         <tr className="border-b">
+          <th className="py-3 pr-3 w-10">
+            <div className="flex items-center">
+              <Checkbox
+                checked={headerChecked}
+                onCheckedChange={() => onToggleAll()}
+                aria-label="Select all dates"
+              />
+            </div>
+          </th>
           <th className="py-3 pr-4">Date</th>
           {shifts.map((s) => (
             <th key={s} className="py-3 pr-4 capitalize">
@@ -32,8 +65,15 @@ export function RosterMonthTable(props: {
       <tbody>
         {monthDays.map((dutyDate) => {
           const day = daysByDate.get(dutyDate);
+          const checked = selectedDates.has(dutyDate);
+
           return (
             <tr key={dutyDate} className="border-b last:border-b-0">
+              <td className="py-3 pr-3 align-top">
+                <div className="pt-0.5">
+                  <Checkbox checked={checked} onCheckedChange={() => onToggleDate(dutyDate)} aria-label={`Select ${dutyDate}`} />
+                </div>
+              </td>
               <td className="py-3 pr-4 tabular-nums">
                 <div className="font-medium">{dutyDate}</div>
               </td>
