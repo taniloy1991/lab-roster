@@ -18,6 +18,7 @@ export function RosterMonthTable(props: {
   onToggleAll: () => void;
   onAdd: (params: { dutyDate: string; shift: Shift }) => void;
   onEdit: (params: { dutyDate: string; shift: Shift; assignment: Assignment }) => void;
+  leaveByDate: Map<string, string>;
 }) {
   const {
     monthDays,
@@ -30,6 +31,7 @@ export function RosterMonthTable(props: {
     onToggleAll,
     onAdd,
     onEdit,
+    leaveByDate,
   } = props;
 
   const selection = useMemo(() => {
@@ -55,6 +57,7 @@ export function RosterMonthTable(props: {
             </div>
           </th>
           <th className="py-3 pr-4">Date</th>
+          <th className="py-3 pr-4">Leave (CL/OFF)</th>
           {shifts.map((s) => (
             <th key={s} className="py-3 pr-4 capitalize">
               {s}
@@ -77,6 +80,10 @@ export function RosterMonthTable(props: {
               <td className="py-3 pr-4 tabular-nums">
                 <div className="font-medium">{dutyDate}</div>
               </td>
+              <td className="py-3 pr-4 align-top">
+                <div className="text-xs text-muted-foreground whitespace-pre-wrap">{leaveByDate.get(dutyDate) ?? "—"}</div>
+              </td>
+
 
               {shifts.map((shift) => {
                 const list = day ? assignmentsByDayShift.get(`${day.id}:${shift}`) ?? [] : [];
@@ -86,18 +93,31 @@ export function RosterMonthTable(props: {
                       {list.map((a) => {
                         const name = staffName.get(a.staff_id) ?? "Unknown";
                         const note = (a.duty_note ?? "").trim();
+                        const onLeaveText = (leaveByDate.get(dutyDate) ?? "").toLowerCase();
+                        const isLeaveCell = onLeaveText.includes(name.toLowerCase());
+
                         return (
                           <button
                             key={a.id}
                             type="button"
                             onClick={() => (canEdit ? onEdit({ dutyDate, shift, assignment: a }) : undefined)}
-                            className="rounded-md border bg-card px-2 py-1 text-left text-xs text-foreground hover:bg-accent disabled:opacity-70"
+                            className={
+                              "rounded-md border px-2 py-1 text-left text-xs text-foreground hover:bg-accent disabled:opacity-70 " +
+                              (isLeaveCell ? "border-destructive/30 bg-destructive/10" : "bg-card")
+                            }
                             disabled={!canEdit}
-                            title={canEdit ? "Edit note / remove" : undefined}
+                            title={
+                              isLeaveCell
+                                ? "Staff is on Leave"
+                                : canEdit
+                                  ? "Edit note / remove"
+                                  : undefined
+                            }
                           >
                             <span className="font-medium">{name}</span>
                             {a.is_extra ? <span className="text-muted-foreground"> · extra</span> : null}
                             {note ? <span className="text-muted-foreground"> — {note}</span> : null}
+                            {isLeaveCell ? <span className="ml-1 text-destructive"> · on leave</span> : null}
                           </button>
                         );
                       })}
@@ -117,6 +137,7 @@ export function RosterMonthTable(props: {
                   </td>
                 );
               })}
+
             </tr>
           );
         })}

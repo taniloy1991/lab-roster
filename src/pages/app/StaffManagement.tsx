@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
 import { z } from "zod";
+import { useNavigate } from "react-router-dom";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/providers/AuthProvider";
@@ -25,6 +26,12 @@ type StaffRow = {
   phone: string | null;
 };
 
+type LeaveHistoryRow = { date: string | null; type: string | null };
+
+type ClBalanceRow = { remaining_days: number | null };
+
+type OffBalanceRow = { off_balance: number | null };
+
 const staffCodeSchema = z
   .string()
   .trim()
@@ -40,6 +47,7 @@ function friendlyStaffError(message: string) {
 }
 
 export default function StaffManagement() {
+  const nav = useNavigate();
   const { activeInstitutionId } = useAuth();
   const [loading, setLoading] = useState(false);
   const [list, setList] = useState<StaffRow[]>([]);
@@ -57,6 +65,14 @@ export default function StaffManagement() {
   const [editDesignation, setEditDesignation] = useState("");
   const [editPhone, setEditPhone] = useState("");
 
+  // Leave statement dialog
+  const [statementOpen, setStatementOpen] = useState(false);
+  const [statementStaff, setStatementStaff] = useState<StaffRow | null>(null);
+  const [statementLoading, setStatementLoading] = useState(false);
+  const [statementClRemaining, setStatementClRemaining] = useState(0);
+  const [statementOffBalance, setStatementOffBalance] = useState(0);
+  const [statementHistory, setStatementHistory] = useState<LeaveHistoryRow[]>([]);
+
   const load = async () => {
     if (!activeInstitutionId) return;
     const res = await supabase
@@ -68,7 +84,7 @@ export default function StaffManagement() {
   };
 
   useEffect(() => {
-    load();
+    void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeInstitutionId]);
 
@@ -108,7 +124,7 @@ export default function StaffManagement() {
     setStaffCode("");
     setDesignation("");
     setPhone("");
-    load();
+    void load();
   };
 
   const openEdit = (s: StaffRow) => {
@@ -158,14 +174,31 @@ export default function StaffManagement() {
 
     setEditOpen(false);
     setEditTarget(null);
-    load();
+    void load();
   };
 
   const remove = async (id: string) => {
     setLoading(true);
     await supabase.from("staff").delete().eq("id", id);
     setLoading(false);
-    load();
+    void load();
+  };
+
+  const openStatement = async (s: StaffRow) => {
+    setStatementStaff(s);
+    setStatementOpen(true);
+    setStatementLoading(true);
+
+    const [clRes, offRes, histRes] = await Promise.all([
+      supabase.from("cl_balance_view").select("remaining_days").eq("staff_id", s.id).maybeSingle(),
+      supabase.from("off_balance_view").select("off_balance").eq("staff_id", s.id).maybeSingle(),
+      supabase.from("staff_leave_history").select("date,type").eq("staff_id", s.id).order("date", { ascending: true }),
+    ]);
+
+    setStatementClRemaining(Number(((clRes.data as ClBalanceRow | null)?.remaining_days ?? 0) || 0));
+    setStatementOffBalance(Number(((offRes.data as OffBalanceRow | null)?.off_balance ?? 0) || 0));
+    setStatementHistory((histRes.data ?? []) as LeaveHistoryRow[]);
+    setStatementLoading(false);
   };
 
   const subtitle = useMemo(() => format(new Date(), "dd MMM yyyy"), []);
@@ -221,10 +254,10 @@ export default function StaffManagement() {
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">Staff list</CardTitle>
-          <CardDescription>Delete is permanent in this MVP.</CardDescription>
+          <CardDescription>Click a name to view leave statement.</CardDescription>
         </CardHeader>
         <CardContent className="overflow-x-auto">
-          <table className="w-full min-w-[860px] text-sm">
+          <table className="w-full min-w-[920px] text-sm">
             <thead className="text-left text-xs text-muted-foreground">
               <tr className="border-b">
                 <th className="py-3 pr-4">Staff code</th>
@@ -245,7 +278,15 @@ export default function StaffManagement() {
               {list.map((s) => (
                 <tr key={s.id} className="border-b last:border-b-0">
                   <td className="py-3 pr-4 font-mono text-xs text-muted-foreground">{s.staff_code ?? "—"}</td>
-                  <td className="py-3 pr-4 font-medium">{s.name}</td>
+                  <td className="py-3 pr-4">
+                    <button
+                      type="button"
+                      className="font-medium hover:underline"
+                      onClick={() => void openStatement(s)}
+                    >
+                      {s.name}
+                    </button>
+                  </td>
                   <td className="py-3 pr-4">{s.designation ?? "—"}</td>
                   <td className="py-3 pr-4">{s.phone ?? "—"}</td>
                   <td className="py-3 pr-4">
@@ -309,6 +350,80 @@ export default function StaffManagement() {
           <DialogFooter>
             <Button onClick={saveEdit} disabled={loading || !editTarget}>
               {loading ? "Saving…" : "Save"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={statementOpen}
+        onOpenChange={(open) => {
+          setStatementOpen(open);
+          if (!open) setStatementStaff(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Staff Leave Statement</DialogTitle>
+            <DialogDescription>{statementStaff ? statementStaff.name : ""}</DialogDescription>
+          </DialogHeader>
+
+          {statementStaff ? (
+            <div className="space-y-4">
+              <div className="grid gap-2 sm:grid-cols-2">
+                <div className="rounded-md border border-input bg-background p-3">
+                  <div className="text-xs text-muted-foreground">CL remaining</div>
+                  <div className="text-xl font-semibold tabular-nums">{statementClRemaining}</div>
+                </div>
+                <div className="rounded-md border border-input bg-background p-3">
+                  <div className="text-xs text-muted-foreground">OFF balance</div>
+                  <div className="text-xl font-semibold tabular-nums">{statementOffBalance}</div>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[520px] text-sm">
+                  <thead className="text-left text-xs text-muted-foreground">
+                    <tr className="border-b">
+                      <th className="py-3 pr-4">Date</th>
+                      <th className="py-3 pr-4">Type</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {statementLoading ? (
+                      <tr>
+                        <td colSpan={2} className="py-10 text-center text-muted-foreground">Loading…</td>
+                      </tr>
+                    ) : statementHistory.length === 0 ? (
+                      <tr>
+                        <td colSpan={2} className="py-10 text-center text-muted-foreground">No leave history.</td>
+                      </tr>
+                    ) : (
+                      statementHistory.map((r, idx) => (
+                        <tr key={`${r.date}-${idx}`} className="border-b last:border-b-0">
+                          <td className="py-3 pr-4 tabular-nums">{r.date ?? "—"}</td>
+                          <td className="py-3 pr-4">{r.type ?? "—"}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ) : null}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (!statementStaff) return;
+                const qs = new URLSearchParams();
+                qs.set("staffId", statementStaff.id);
+                nav(`/app/staff/statement/print?${qs.toString()}`);
+              }}
+              disabled={!statementStaff}
+            >
+              Download PDF
             </Button>
           </DialogFooter>
         </DialogContent>

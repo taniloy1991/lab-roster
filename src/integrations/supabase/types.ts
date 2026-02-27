@@ -90,14 +90,29 @@ export type Database = {
             foreignKeyName: "casual_leave_ledger_staff_id_fkey"
             columns: ["staff_id"]
             isOneToOne: false
+            referencedRelation: "smart_shift_priority"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "casual_leave_ledger_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
             referencedRelation: "staff"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "casual_leave_ledger_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff_monthly_duty_summary"
+            referencedColumns: ["staff_id"]
           },
         ]
       }
       compensatory_off_ledger: {
         Row: {
           created_at: string
+          direction: string | null
           duty_date: string
           entry_type: string
           id: string
@@ -108,6 +123,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          direction?: string | null
           duty_date: string
           entry_type: string
           id?: string
@@ -118,6 +134,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          direction?: string | null
           duty_date?: string
           entry_type?: string
           id?: string
@@ -159,8 +176,22 @@ export type Database = {
             foreignKeyName: "compensatory_off_ledger_staff_id_fkey"
             columns: ["staff_id"]
             isOneToOne: false
+            referencedRelation: "smart_shift_priority"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compensatory_off_ledger_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
             referencedRelation: "staff"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compensatory_off_ledger_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff_monthly_duty_summary"
+            referencedColumns: ["staff_id"]
           },
         ]
       }
@@ -189,25 +220,31 @@ export type Database = {
         Row: {
           created_at: string
           holiday_date: string
+          holiday_type: string | null
           id: string
           institution_id: string
           name: string
+          staff_id: string | null
           updated_at: string
         }
         Insert: {
           created_at?: string
           holiday_date: string
+          holiday_type?: string | null
           id?: string
           institution_id: string
           name: string
+          staff_id?: string | null
           updated_at?: string
         }
         Update: {
           created_at?: string
           holiday_date?: string
+          holiday_type?: string | null
           id?: string
           institution_id?: string
           name?: string
+          staff_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -217,6 +254,48 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "institutions"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "holidays_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "cl_balance_view"
+            referencedColumns: ["staff_id"]
+          },
+          {
+            foreignKeyName: "holidays_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "monthly_leave_summary"
+            referencedColumns: ["staff_id"]
+          },
+          {
+            foreignKeyName: "holidays_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "off_balance_view"
+            referencedColumns: ["staff_id"]
+          },
+          {
+            foreignKeyName: "holidays_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "smart_shift_priority"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "holidays_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "holidays_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff_monthly_duty_summary"
+            referencedColumns: ["staff_id"]
           },
         ]
       }
@@ -381,8 +460,22 @@ export type Database = {
             foreignKeyName: "leave_requests_staff_id_fkey"
             columns: ["staff_id"]
             isOneToOne: false
+            referencedRelation: "smart_shift_priority"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leave_requests_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
             referencedRelation: "staff"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leave_requests_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff_monthly_duty_summary"
+            referencedColumns: ["staff_id"]
           },
         ]
       }
@@ -429,6 +522,7 @@ export type Database = {
           institution_id: string
           is_friday: boolean | null
           is_govt_holiday: boolean | null
+          leave_type: string | null
           updated_at: string
         }
         Insert: {
@@ -438,6 +532,7 @@ export type Database = {
           institution_id: string
           is_friday?: boolean | null
           is_govt_holiday?: boolean | null
+          leave_type?: string | null
           updated_at?: string
         }
         Update: {
@@ -447,6 +542,7 @@ export type Database = {
           institution_id?: string
           is_friday?: boolean | null
           is_govt_holiday?: boolean | null
+          leave_type?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -520,10 +616,36 @@ export type Database = {
             foreignKeyName: "roster_shift_assignments_staff_id_fkey"
             columns: ["staff_id"]
             isOneToOne: false
+            referencedRelation: "smart_shift_priority"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "roster_shift_assignments_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
             referencedRelation: "staff"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "roster_shift_assignments_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff_monthly_duty_summary"
+            referencedColumns: ["staff_id"]
+          },
         ]
+      }
+      selected_roster_dates: {
+        Row: {
+          duty_date: string
+        }
+        Insert: {
+          duty_date: string
+        }
+        Update: {
+          duty_date?: string
+        }
+        Relationships: []
       }
       staff: {
         Row: {
@@ -605,10 +727,27 @@ export type Database = {
     Views: {
       cl_balance_view: {
         Row: {
-          cl_remaining: number | null
-          cl_used: number | null
           name: string | null
+          remaining_days: number | null
           staff_id: string | null
+          used_days: number | null
+          yearly_quota: number | null
+        }
+        Relationships: []
+      }
+      monthly_clean_pdf: {
+        Row: {
+          cl_remaining: number | null
+          name: string | null
+          off_balance: number | null
+        }
+        Relationships: []
+      }
+      monthly_leave_pdf: {
+        Row: {
+          cl_remaining: number | null
+          name: string | null
+          off_balance: number | null
         }
         Relationships: []
       }
@@ -625,19 +764,130 @@ export type Database = {
         }
         Relationships: []
       }
+      monthly_roster_grid: {
+        Row: {
+          duty_date: string | null
+          evening_staff: string | null
+          leave_staff: string | null
+          morning_staff: string | null
+          night_staff: string | null
+        }
+        Relationships: []
+      }
       off_balance_view: {
         Row: {
-          earned_off: number | null
           name: string | null
           off_balance: number | null
           staff_id: string | null
-          used_off: number | null
+        }
+        Relationships: []
+      }
+      printable_leave_statement: {
+        Row: {
+          cl_remaining: number | null
+          header: string | null
+          holiday_date: string | null
+          holiday_type: string | null
+          name: string | null
+          off_balance: number | null
+        }
+        Relationships: []
+      }
+      roster_pdf_view: {
+        Row: {
+          duty_date: string | null
+          duty_note: string | null
+          is_extra: boolean | null
+          name: string | null
+          shift: Database["public"]["Enums"]["roster_shift"] | null
+        }
+        Relationships: []
+      }
+      roster_selected_pdf: {
+        Row: {
+          duty_date: string | null
+          evening_staff: string | null
+          leave_staff: string | null
+          morning_staff: string | null
+          night_staff: string | null
+        }
+        Relationships: []
+      }
+      smart_shift_priority: {
+        Row: {
+          duty_count: number | null
+          id: string | null
+          name: string | null
+        }
+        Relationships: []
+      }
+      staff_detailed_pdf: {
+        Row: {
+          holiday_date: string | null
+          holiday_type: string | null
+          leave_label: string | null
+          name: string | null
+        }
+        Relationships: []
+      }
+      staff_holiday_view: {
+        Row: {
+          holiday_date: string | null
+          holiday_type: string | null
+          name: string | null
+        }
+        Relationships: []
+      }
+      staff_leave_history: {
+        Row: {
+          date: string | null
+          name: string | null
+          staff_id: string | null
+          type: string | null
+        }
+        Relationships: []
+      }
+      staff_leave_statement: {
+        Row: {
+          cl_remaining: number | null
+          holiday_date: string | null
+          holiday_type: string | null
+          name: string | null
+          off_balance: number | null
+        }
+        Relationships: []
+      }
+      staff_monthly_duty_summary: {
+        Row: {
+          evening_count: number | null
+          month: string | null
+          morning_count: number | null
+          name: string | null
+          night_count: number | null
+          staff_id: string | null
+          total_duties: number | null
         }
         Relationships: []
       }
     }
     Functions: {
       get_my_institution_id: { Args: never; Returns: string }
+      get_single_staff_summary: {
+        Args: { p_staff_id: string }
+        Returns: {
+          cl_remaining: number
+          name: string
+          off_balance: number
+        }[]
+      }
+      get_staff_leave_between: {
+        Args: { end_date: string; start_date: string }
+        Returns: {
+          holiday_date: string
+          holiday_type: string
+          name: string
+        }[]
+      }
       has_global_role: {
         Args: {
           _role: Database["public"]["Enums"]["global_role"]

@@ -13,6 +13,7 @@ type AddState = {
   mode: "add";
   dutyDate: string;
   shift: Shift;
+  leaveStaffIds?: Set<string>;
 };
 
 type EditState = {
@@ -20,6 +21,7 @@ type EditState = {
   dutyDate: string;
   shift: Shift;
   assignment: Assignment;
+  leaveStaffIds?: Set<string>;
 };
 
 export type AssignmentDialogState = AddState | EditState;
@@ -114,6 +116,12 @@ export function AssignmentDialog(props: {
 
         {state ? (
           <div className="space-y-4">
+            {state.leaveStaffIds?.size ? (
+              <div className="rounded-md border border-input bg-background px-3 py-2 text-xs text-muted-foreground">
+                Some staff are on leave for this date; they are disabled in the dropdown.
+              </div>
+            ) : null}
+
             <div className="space-y-2">
               <Label>Staff</Label>
               {isEdit ? (
@@ -126,13 +134,24 @@ export function AssignmentDialog(props: {
                   disabled={!canEdit}
                 >
                   <option value="">Select staff…</option>
-                  {staff.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name}
-                    </option>
-                  ))}
+                  {staff.map((s) => {
+                    const onLeave = Boolean(state.leaveStaffIds?.has(s.id));
+                    return (
+                      <option key={s.id} value={s.id} disabled={onLeave}>
+                        {s.name}{onLeave ? " (On Leave)" : ""}
+                      </option>
+                    );
+                  })}
                 </select>
               )}
+
+              {!isEdit && staffId && state.leaveStaffIds?.has(staffId) ? (
+                <p className="text-xs text-destructive">Staff is on Leave</p>
+              ) : null}
+
+              {isEdit && state.leaveStaffIds?.has(staffId) ? (
+                <p className="text-xs text-destructive">Staff is on Leave</p>
+              ) : null}
             </div>
 
             {!isEdit ? (
