@@ -16,8 +16,8 @@ type OffBalanceRow = { off_balance: number | null };
 type StaffRow = { name: string | null };
 
 export default function StaffLeaveStatementPrint() {
-  const { loading: authLoading, session, institutionRoles } = useAuth();
-  const canView = institutionRoles.includes("lab_incharge");
+  const { loading: authLoading, session, institutionRoles, globalRoles } = useAuth();
+  const canView = globalRoles.includes("super_admin") || institutionRoles.includes("lab_incharge");
 
   const nav = useNavigate();
   const [params] = useSearchParams();

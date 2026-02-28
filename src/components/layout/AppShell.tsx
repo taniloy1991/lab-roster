@@ -78,6 +78,9 @@ export function AppShell() {
   );
 
   const visibleItems = items.filter((it) => {
+    // super_admin must always see all features in navigation
+    if (isSuperAdmin) return true;
+
     if (it.when === "any") return true;
     if (it.when === "lab") return isLab;
     if (it.when === "staff") return isStaff;
