@@ -49,7 +49,22 @@ const App = () => (
                 <Route path="/signup" element={<Signup />} />
 
                 {/* Standalone print routes (NO AppShell) */}
-                <Route path="/print/monthly/:month" element={<PrintMonthlyReport />} />
+                <Route
+                  path="/print/monthly/:month"
+                  element={
+                    <RequireAuth>
+                      <PrintMonthlyReport />
+                    </RequireAuth>
+                  }
+                />
+                <Route
+                  path="/print/roster"
+                  element={
+                    <RequireAuth>
+                      <RosterPrint />
+                    </RequireAuth>
+                  }
+                />
                 <Route
                   path="/print/cl-overview"
                   element={
@@ -141,14 +156,6 @@ const App = () => (
                     element={
                       <RoleGate requireAnyInstitutionRole={["lab_incharge", "staff"]}>
                         <RosterCalendar />
-                      </RoleGate>
-                    }
-                  />
-                  <Route
-                    path="roster/print"
-                    element={
-                      <RoleGate requireAnyInstitutionRole={["lab_incharge", "staff"]}>
-                        <RosterPrint />
                       </RoleGate>
                     }
                   />
