@@ -934,6 +934,48 @@ export type Database = {
           },
         ]
       }
+      roster_visual_entries: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          duty_date: string
+          id: string
+          institution_id: string
+          leave_type:
+            | Database["public"]["Enums"]["roster_visual_leave_type"]
+            | null
+          responsibility_note: string | null
+          shift: Database["public"]["Enums"]["roster_shift"] | null
+          staff_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          duty_date: string
+          id?: string
+          institution_id: string
+          leave_type?:
+            | Database["public"]["Enums"]["roster_visual_leave_type"]
+            | null
+          responsibility_note?: string | null
+          shift?: Database["public"]["Enums"]["roster_shift"] | null
+          staff_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          duty_date?: string
+          id?: string
+          institution_id?: string
+          leave_type?:
+            | Database["public"]["Enums"]["roster_visual_leave_type"]
+            | null
+          responsibility_note?: string | null
+          shift?: Database["public"]["Enums"]["roster_shift"] | null
+          staff_id?: string | null
+        }
+        Relationships: []
+      }
       selected_roster_dates: {
         Row: {
           duty_date: string
@@ -1404,6 +1446,13 @@ export type Database = {
       leave_type: "casual" | "off"
       off_ledger_type: "earn" | "use"
       roster_shift: "morning" | "evening" | "night"
+      roster_visual_leave_type:
+        | "others"
+        | "earned_leave"
+        | "casual_leave"
+        | "week_off"
+        | "govt_holiday"
+        | "none"
       staff_leave_type: "casual" | "off_use" | "general_off" | "government"
     }
     CompositeTypes: {
@@ -1538,6 +1587,14 @@ export const Constants = {
       leave_type: ["casual", "off"],
       off_ledger_type: ["earn", "use"],
       roster_shift: ["morning", "evening", "night"],
+      roster_visual_leave_type: [
+        "others",
+        "earned_leave",
+        "casual_leave",
+        "week_off",
+        "govt_holiday",
+        "none",
+      ],
       staff_leave_type: ["casual", "off_use", "general_off", "government"],
     },
   },

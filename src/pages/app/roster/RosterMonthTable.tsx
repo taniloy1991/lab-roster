@@ -10,51 +10,38 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-import type { Assignment, Shift, StaffRow } from "./types";
-
-const shifts: Shift[] = ["morning", "evening", "night"];
-
-type LeaveType = "casual" | "off_use" | "general_off" | "government";
-
-const leaveOptions: Array<{ value: LeaveType | "none"; label: string }> = [
-  { value: "none", label: "None" },
-  { value: "casual", label: "Casual (CL)" },
-  { value: "off_use", label: "OFF (use)" },
-  { value: "general_off", label: "General OFF" },
-  { value: "government", label: "Government Holiday" },
-];
+import type { Shift, StaffRow } from "./types";
+import type { VisualEntry, VisualLeaveType } from "./useRosterVisualMonth";
 
 export function RosterMonthTable(props: {
   monthDays: string[];
-  daysByDate: Map<string, { id: string; duty_date: string }>;
-  assignmentsByDayShift: Map<string, Assignment[]>;
   staff: StaffRow[];
   staffName: Map<string, string>;
-  canEdit: boolean;
-  canEditLeaves: boolean;
+  shifts: Shift[];
   selectedDates: Set<string>;
   onToggleDate: (dutyDate: string) => void;
   onToggleAll: () => void;
-  onAdd: (params: { dutyDate: string; shift: Shift }) => void;
-  onEdit: (params: { dutyDate: string; shift: Shift; assignment: Assignment }) => void;
-  leavesByDateStaff: Map<string, Map<string, LeaveType>>;
-  onSetLeave: (params: { dutyDate: string; staffId: string; leaveType: LeaveType | "none" }) => void;
+  byDateShift: Map<string, VisualEntry[]>;
+  leaveByDate: Map<string, VisualLeaveType>;
+  leaveOptions: Array<{ value: VisualLeaveType; label: string }>;
+  onSetLeave: (params: { dutyDate: string; leaveType: VisualLeaveType }) => void;
+  onOpenAssign: (params: { dutyDate: string; shift: Shift; entry?: VisualEntry }) => void;
+  onRemoveEntry: (entryId: string) => void;
 }) {
   const {
     monthDays,
-    daysByDate,
-    assignmentsByDayShift,
     staff,
     staffName,
-    canEdit,
-    canEditLeaves,
+    shifts,
     selectedDates,
     onToggleDate,
     onToggleAll,
-    onAdd,
-    onEdit,
-    leavesByDateStaff,
+    byDateShift,
+    leaveByDate,
+    leaveOptions,
     onSetLeave,
+    onOpenAssign,
+    onRemoveEntry,
   } = props;
 
   const selection = useMemo(() => {
@@ -72,15 +59,11 @@ export function RosterMonthTable(props: {
         <tr className="border-b">
           <th className="py-3 pr-3 w-10">
             <div className="flex items-center">
-              <Checkbox
-                checked={headerChecked}
-                onCheckedChange={() => onToggleAll()}
-                aria-label="Select all dates"
-              />
+              <Checkbox checked={headerChecked} onCheckedChange={() => onToggleAll()} aria-label="Select all dates" />
             </div>
           </th>
           <th className="py-3 pr-4">Date</th>
-          <th className="py-3 pr-4">Leave (CL/OFF)</th>
+          <th className="py-3 pr-4">Leave (visual only)</th>
           {shifts.map((s) => (
             <th key={s} className="py-3 pr-4 capitalize">
               {s}
@@ -88,10 +71,11 @@ export function RosterMonthTable(props: {
           ))}
         </tr>
       </thead>
+
       <tbody>
         {monthDays.map((dutyDate) => {
-          const day = daysByDate.get(dutyDate);
           const checked = selectedDates.has(dutyDate);
+          const currentLeave = leaveByDate.get(dutyDate) ?? "none";
 
           return (
             <tr key={dutyDate} className="border-b last:border-b-0">
@@ -100,92 +84,79 @@ export function RosterMonthTable(props: {
                   <Checkbox checked={checked} onCheckedChange={() => onToggleDate(dutyDate)} aria-label={`Select ${dutyDate}`} />
                 </div>
               </td>
+
               <td className="py-3 pr-4 tabular-nums">
                 <div className="font-medium">{dutyDate}</div>
               </td>
+
               <td className="py-3 pr-4 align-top">
-                <div className="space-y-2">
-                  {staff.map((s) => {
-                    const current = leavesByDateStaff.get(dutyDate)?.get(s.id) ?? "none";
-                    return (
-                      <div key={s.id} className="flex items-center justify-between gap-2">
-                        <div className="min-w-0 text-xs text-muted-foreground truncate">{s.name}</div>
-                        <Select
-                          value={current}
-                          onValueChange={(v) => onSetLeave({ dutyDate, staffId: s.id, leaveType: v as any })}
-                          disabled={!canEditLeaves}
-                        >
-                          <SelectTrigger className="h-8 w-[190px] text-xs">
-                            <SelectValue placeholder="None" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {leaveOptions.map((o) => (
-                              <SelectItem key={o.value} value={o.value}>
-                                {o.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    );
-                  })}
-                </div>
+                <Select value={currentLeave} onValueChange={(v) => onSetLeave({ dutyDate, leaveType: v as VisualLeaveType })}>
+                  <SelectTrigger className="h-8 w-[200px] text-xs">
+                    <SelectValue placeholder="Select Leave" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {leaveOptions.map((o) => (
+                      <SelectItem key={o.value} value={o.value}>
+                        {o.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </td>
 
-
               {shifts.map((shift) => {
-                const list = day ? assignmentsByDayShift.get(`${day.id}:${shift}`) ?? [] : [];
+                const list = byDateShift.get(`${dutyDate}:${shift}`) ?? [];
+
                 return (
                   <td key={shift} className="py-3 pr-4 align-top">
-                    <div className="flex flex-wrap items-start gap-2">
-                      {list.map((a) => {
-                        const name = staffName.get(a.staff_id) ?? "Unknown";
-                        const note = (a.duty_note ?? "").trim();
-                        const onLeave = leavesByDateStaff.get(dutyDate);
-                        const leaveType = onLeave?.get(a.staff_id) ?? "none";
-                        const isLeaveCell = leaveType !== "none" && leaveType !== "government";
+                    <div className="flex flex-col gap-2">
+                      <div className="flex flex-wrap items-start gap-2">
+                        {list.map((e) => {
+                          const name = e.staff_id ? staffName.get(String(e.staff_id)) ?? "Unknown" : "Unknown";
+                          const note = String(e.responsibility_note ?? "").trim();
 
-                        return (
-                          <button
-                            key={a.id}
-                            type="button"
-                            onClick={() => (canEdit ? onEdit({ dutyDate, shift, assignment: a }) : undefined)}
-                            className={
-                              "rounded-md border px-2 py-1 text-left text-xs text-foreground hover:bg-accent disabled:opacity-70 " +
-                              (isLeaveCell ? "border-destructive/30 bg-destructive/10" : "bg-card")
-                            }
-                            disabled={!canEdit}
-                            title={
-                              isLeaveCell
-                                ? "Staff is on Leave"
-                                : canEdit
-                                  ? "Edit note / remove"
-                                  : undefined
-                            }
-                          >
-                            <span className="font-medium">{name}</span>
-                            {note ? <span className="text-muted-foreground"> — {note}</span> : null}
-                            {isLeaveCell ? <span className="ml-1 text-destructive"> · on leave</span> : null}
-                          </button>
-                        );
-                      })}
+                          return (
+                            <div
+                              key={e.id}
+                              className="flex items-center gap-2 rounded-md border border-border bg-card px-2 py-1 text-xs"
+                            >
+                              <button
+                                type="button"
+                                onClick={() => onOpenAssign({ dutyDate, shift, entry: e })}
+                                className="min-w-0 truncate text-left"
+                                title={note ? `${name} — ${note}` : name}
+                              >
+                                <span className="font-medium">{name}</span>
+                                {note ? <span className="text-muted-foreground"> — {note}</span> : null}
+                              </button>
+                              <button
+                                type="button"
+                                className="rounded-sm px-1 text-muted-foreground hover:text-foreground"
+                                onClick={() => onRemoveEntry(e.id)}
+                                aria-label="Remove"
+                              >
+                                ×
+                              </button>
+                            </div>
+                          );
+                        })}
 
-                      {canEdit ? (
                         <Button
                           type="button"
                           variant="outline"
                           size="sm"
                           className="h-8 px-2 text-xs"
-                          onClick={() => onAdd({ dutyDate, shift })}
+                          onClick={() => onOpenAssign({ dutyDate, shift })}
                         >
-                          + Add
+                          Select Staff
                         </Button>
-                      ) : null}
+                      </div>
+
+                      {list.length === 0 ? <div className="text-xs text-muted-foreground">No staff selected.</div> : null}
                     </div>
                   </td>
                 );
               })}
-
             </tr>
           );
         })}

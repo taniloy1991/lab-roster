@@ -8,22 +8,35 @@ import { useAuth } from "@/providers/AuthProvider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
-import { AssignmentDialog, type AssignmentDialogState } from "./roster/AssignmentDialog";
 import { RosterMonthTable } from "./roster/RosterMonthTable";
-import type { Shift } from "./roster/types";
-import { useRosterMonth } from "./roster/useRosterMonth";
+import type { Shift, StaffRow } from "./roster/types";
+import { useRosterVisualMonth, type VisualEntry, type VisualLeaveType } from "./roster/useRosterVisualMonth";
 
-type LeaveRow = {
-  duty_date: string;
-  staff_id: string;
-  leave_type: "casual" | "off_use" | "general_off" | "government";
-};
+const shifts: Shift[] = ["morning", "evening", "night"];
+
+const leaveOptions: Array<{ value: VisualLeaveType; label: string }> = [
+  { value: "others", label: "Others" },
+  { value: "earned_leave", label: "Earned Leave" },
+  { value: "casual_leave", label: "Casual Leave" },
+  { value: "week_off", label: "Week Off" },
+  { value: "govt_holiday", label: "Govt. Holiday" },
+  { value: "none", label: "None" },
+];
 
 export default function RosterCalendar() {
   const nav = useNavigate();
-  const { activeInstitutionId, institutionRoles } = useAuth();
-  const canEdit = institutionRoles.includes("lab_incharge");
+  const { activeInstitutionId, session } = useAuth();
 
   const [month, setMonth] = useState(() => {
     const d = new Date();
@@ -38,24 +51,29 @@ export default function RosterCalendar() {
     return { start, end };
   }, [month]);
 
-  const {
-    loading,
-    staff,
-    days,
-    monthDays,
-    reload,
-    addAssignment,
-    removeAssignment,
-    updateDutyNote,
-    byDayShift,
-    staffName,
-  } = useRosterMonth({ activeInstitutionId, month });
+  const { loading, monthDays, reload, byDateShift, leaveByDate, upsertStaffEntry, removeEntry, setLeaveForDate } =
+    useRosterVisualMonth({ activeInstitutionId, month });
+
+  const [staff, setStaff] = useState<StaffRow[]>([]);
+  const staffName = useMemo(() => new Map(staff.map((s) => [s.id, s.name])), [staff]);
 
   useEffect(() => {
-    reload();
+    void reload();
   }, [reload, activeInstitutionId, month]);
 
-  const daysByDate = useMemo(() => new Map(days.map((d) => [d.duty_date, d])), [days]);
+  useEffect(() => {
+    const loadStaff = async () => {
+      if (!activeInstitutionId) return;
+      const res = await supabase
+        .from("staff")
+        .select("id,name")
+        .eq("institution_id", activeInstitutionId)
+        .eq("is_active", true)
+        .order("name");
+      setStaff((res.data ?? []) as any);
+    };
+    void loadStaff();
+  }, [activeInstitutionId]);
 
   // Persisted selection (backend table selected_roster_dates)
   const [selectedDates, setSelectedDates] = useState<Set<string>>(() => new Set());
@@ -68,8 +86,7 @@ export default function RosterCalendar() {
       .gte("duty_date", format(range.start, "yyyy-MM-dd"))
       .lte("duty_date", format(range.end, "yyyy-MM-dd"));
 
-    const next = new Set((res.data ?? []).map((r) => r.duty_date));
-    setSelectedDates(next);
+    setSelectedDates(new Set((res.data ?? []).map((r) => r.duty_date)));
   };
 
   useEffect(() => {
@@ -80,7 +97,6 @@ export default function RosterCalendar() {
   const toggleDate = async (dutyDate: string) => {
     const wasSelected = selectedDates.has(dutyDate);
 
-    // Optimistic UI update
     setSelectedDates((prev) => {
       const next = new Set(prev);
       if (next.has(dutyDate)) next.delete(dutyDate);
@@ -88,7 +104,6 @@ export default function RosterCalendar() {
       return next;
     });
 
-    // Keep DB in sync (idempotent: delete then insert)
     if (wasSelected) {
       await supabase.from("selected_roster_dates").delete().eq("duty_date", dutyDate);
     } else {
@@ -105,6 +120,7 @@ export default function RosterCalendar() {
       .delete()
       .gte("duty_date", format(range.start, "yyyy-MM-dd"))
       .lte("duty_date", format(range.end, "yyyy-MM-dd"));
+
     if (dates.length) {
       await supabase.from("selected_roster_dates").insert(dates.map((d) => ({ duty_date: d })));
     }
@@ -122,119 +138,55 @@ export default function RosterCalendar() {
   const downloadSelectedPdf = () => {
     const qs = new URLSearchParams();
     qs.set("month", month);
-    nav(`/app/roster/print?${qs.toString()}`);
+    nav(`/print/roster?${qs.toString()}`);
   };
 
-  // Leave per staff per date (backend table staff_leaves)
-  const [leavesByDateStaff, setLeavesByDateStaff] = useState<Map<string, Map<string, LeaveRow["leave_type"]>>>(
-    () => new Map(),
-  );
+  // Dialog state for Select Staff
+  const [dlgOpen, setDlgOpen] = useState(false);
+  const [dlgState, setDlgState] = useState<{
+    dutyDate: string;
+    shift: Shift;
+    entry?: VisualEntry;
+  } | null>(null);
 
-  const loadLeaves = async () => {
-    if (!activeInstitutionId) return;
+  const [dlgStaffId, setDlgStaffId] = useState("");
+  const [dlgNote, setDlgNote] = useState("");
+  const [dlgSaving, setDlgSaving] = useState(false);
 
-    const res = await supabase
-      .from("staff_leaves")
-      .select("duty_date,staff_id,leave_type")
-      .eq("institution_id", activeInstitutionId)
-      .gte("duty_date", format(range.start, "yyyy-MM-dd"))
-      .lte("duty_date", format(range.end, "yyyy-MM-dd"));
+  const openAssign = (p: { dutyDate: string; shift: Shift; entry?: VisualEntry }) => {
+    setDlgState({ dutyDate: p.dutyDate, shift: p.shift, entry: p.entry });
+    setDlgStaffId(p.entry?.staff_id ?? "");
+    setDlgNote(p.entry?.responsibility_note ?? "");
+    setDlgOpen(true);
+  };
 
-    const map = new Map<string, Map<string, LeaveRow["leave_type"]>>();
-    for (const r of (res.data ?? []) as any[]) {
-      const dutyDate = String(r.duty_date);
-      const staffId = String(r.staff_id);
-      const leaveType = r.leave_type as LeaveRow["leave_type"];
-      const inner = map.get(dutyDate) ?? new Map<string, LeaveRow["leave_type"]>();
-      inner.set(staffId, leaveType);
-      map.set(dutyDate, inner);
+  const saveAssign = async () => {
+    if (!dlgState || !activeInstitutionId) return;
+    if (!dlgStaffId) return;
+
+    setDlgSaving(true);
+    try {
+      await upsertStaffEntry({
+        dutyDate: dlgState.dutyDate,
+        shift: dlgState.shift,
+        staffId: dlgStaffId,
+        responsibilityNote: dlgNote,
+        entryId: dlgState.entry?.id,
+      });
+      setDlgOpen(false);
+    } finally {
+      setDlgSaving(false);
     }
-
-    setLeavesByDateStaff(map);
   };
 
-  useEffect(() => {
-    void loadLeaves();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeInstitutionId, range.end, range.start]);
-
-  const setLeave = async (params: { dutyDate: string; staffId: string; leaveType: LeaveRow["leave_type"] | "none" }) => {
-    if (!activeInstitutionId) return;
-
-    // Optimistic UI
-    setLeavesByDateStaff((prev) => {
-      const next = new Map(prev);
-      const inner = new Map(next.get(params.dutyDate) ?? new Map());
-      if (params.leaveType === "none") inner.delete(params.staffId);
-      else inner.set(params.staffId, params.leaveType);
-      if (inner.size) next.set(params.dutyDate, inner);
-      else next.delete(params.dutyDate);
-      return next;
-    });
-
-    if (params.leaveType === "none") {
-      await supabase
-        .from("staff_leaves")
-        .delete()
-        .eq("institution_id", activeInstitutionId)
-        .eq("duty_date", params.dutyDate)
-        .eq("staff_id", params.staffId);
-      return;
-    }
-
-    await supabase.from("staff_leaves").upsert(
-      {
-        institution_id: activeInstitutionId,
-        duty_date: params.dutyDate,
-        staff_id: params.staffId,
-        leave_type: params.leaveType,
-      },
-      { onConflict: "institution_id,duty_date,staff_id" },
-    );
-  };
-
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [dialogState, setDialogState] = useState<AssignmentDialogState | null>(null);
-
-  const openAdd = async (params: { dutyDate: string; shift: Shift }) => {
-    // Determine who is on leave for this date; government does not block.
-    const leaveRes = await supabase
-      .from("staff_leaves")
-      .select("staff_id,leave_type")
-      .eq("institution_id", activeInstitutionId)
-      .eq("duty_date", params.dutyDate)
-      .in("leave_type", ["casual", "off_use", "general_off"]);
-
-    const leaveStaffIds = new Set(
-      ((leaveRes.data ?? []) as { staff_id: string }[]).map((r) => r.staff_id).filter(Boolean) as string[],
-    );
-
-    setDialogState({ mode: "add", dutyDate: params.dutyDate, shift: params.shift, leaveStaffIds });
-    setDialogOpen(true);
-  };
-
-  const openEdit = async (params: { dutyDate: string; shift: Shift; assignment: any }) => {
-    const leaveRes = await supabase
-      .from("staff_leaves")
-      .select("staff_id,leave_type")
-      .eq("institution_id", activeInstitutionId)
-      .eq("duty_date", params.dutyDate)
-      .in("leave_type", ["casual", "off_use", "general_off"]);
-
-    const leaveStaffIds = new Set(
-      ((leaveRes.data ?? []) as { staff_id: string }[]).map((r) => r.staff_id).filter(Boolean) as string[],
-    );
-
-    setDialogState({ mode: "edit", dutyDate: params.dutyDate, shift: params.shift, assignment: params.assignment, leaveStaffIds });
-    setDialogOpen(true);
-  };
+  if (!session) return null;
 
   return (
     <div className="space-y-6">
       <header className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div>
           <h2 className="text-2xl font-semibold tracking-tight">Duty roster</h2>
-          <p className="text-sm text-muted-foreground">Calendar-based, 3 shifts/day. Add notes per assignment.</p>
+          <p className="text-sm text-muted-foreground">Visual planning only (no CL/OFF accounting impact).</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Input type="month" value={month} onChange={(e) => setMonth(e.target.value)} className="w-[190px]" />
@@ -247,59 +199,92 @@ export default function RosterCalendar() {
           <Button variant="outline" onClick={downloadSelectedPdf}>
             Download Selected as PDF
           </Button>
-          <Button onClick={() => { reload(); void loadSelectedDates(); }} disabled={loading}>
+          <Button
+            onClick={() => {
+              void reload();
+              void loadSelectedDates();
+            }}
+            disabled={loading}
+          >
             {loading ? "Loading…" : "Refresh"}
           </Button>
         </div>
       </header>
 
-        <Card>
-          <CardHeader>
-            <div className="flex flex-col gap-1 md:flex-row md:items-baseline md:justify-between">
-              <div>
-                <CardTitle className="text-lg">Month view</CardTitle>
-                <CardDescription>
-                  {canEdit ? "Click +Add or a staff chip to add/edit duty note." : "Read-only view for staff."}
-                </CardDescription>
-              </div>
-              <div className="text-xs text-muted-foreground">
-                {selectedDates.size ? `${selectedDates.size} selected` : "No date selected → exports full month"}
-              </div>
+      <Card>
+        <CardHeader>
+          <div className="flex flex-col gap-1 md:flex-row md:items-baseline md:justify-between">
+            <div>
+              <CardTitle className="text-lg">Month view</CardTitle>
+              <CardDescription>Use Select Staff + responsibility per shift; set one Leave type per date.</CardDescription>
             </div>
-          </CardHeader>
-          <CardContent className="overflow-x-auto">
-            <RosterMonthTable
-              monthDays={monthDays}
-              daysByDate={daysByDate}
-              assignmentsByDayShift={byDayShift}
-              staff={staff}
-              staffName={staffName}
-              canEdit={canEdit}
-              canEditLeaves={canEdit}
-              selectedDates={selectedDates}
-              onToggleDate={(d) => void toggleDate(d)}
-              onToggleAll={() => void selectAll()}
-              onAdd={openAdd}
-              onEdit={openEdit}
-              leavesByDateStaff={leavesByDateStaff}
-              onSetLeave={(p) => void setLeave(p)}
-            />
-          </CardContent>
-        </Card>
+            <div className="text-xs text-muted-foreground">
+              {selectedDates.size ? `${selectedDates.size} selected` : "No date selected → exports full month"}
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="overflow-x-auto">
+          <RosterMonthTable
+            monthDays={monthDays}
+            staff={staff}
+            staffName={staffName}
+            shifts={shifts}
+            selectedDates={selectedDates}
+            onToggleDate={(d) => void toggleDate(d)}
+            onToggleAll={() => void selectAll()}
+            byDateShift={byDateShift}
+            leaveByDate={leaveByDate}
+            leaveOptions={leaveOptions}
+            onSetLeave={(p) => void setLeaveForDate(p)}
+            onOpenAssign={openAssign}
+            onRemoveEntry={(id) => void removeEntry(id)}
+          />
+        </CardContent>
+      </Card>
 
-      <AssignmentDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        state={dialogState}
-        staff={staff}
-        staffName={staffName}
-        canEdit={canEdit}
-        onAdd={async ({ dutyDate, shift, staffId, isExtra, dutyNote }) =>
-          addAssignment({ dutyDate, shift, staffId, isExtra, dutyNote })
-        }
-        onUpdate={async ({ assignmentId, dutyNote }) => updateDutyNote({ assignmentId, dutyNote })}
-        onRemove={async (assignmentId) => removeAssignment(assignmentId)}
-      />
+      <Dialog open={dlgOpen} onOpenChange={setDlgOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{dlgState?.entry ? "Edit staff" : "Select staff"}</DialogTitle>
+            <DialogDescription>
+              {dlgState ? `${dlgState.dutyDate} • ${dlgState.shift}` : ""}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Staff</Label>
+              <Select value={dlgStaffId} onValueChange={setDlgStaffId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select staff…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {staff.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Responsibility</Label>
+              <Textarea
+                value={dlgNote}
+                onChange={(e) => setDlgNote(e.target.value)}
+                placeholder="Write responsibility / note…"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button onClick={saveAssign} disabled={!dlgState || !dlgStaffId || dlgSaving}>
+              {dlgSaving ? "Saving…" : "Save"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
