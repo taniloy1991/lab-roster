@@ -100,9 +100,6 @@ export default function HolidaysCalendar() {
     setLoading(false);
     void load();
   };
-
-  const today = useMemo(() => new Date(), []);
-
   return (
     <div className="space-y-6">
       <header>
@@ -134,7 +131,6 @@ export default function HolidaysCalendar() {
                   onSelect={setHolidayDate}
                   initialFocus
                   className={cn("p-3 pointer-events-auto")}
-                  disabled={(date) => date < today}
                 />
               </PopoverContent>
             </Popover>
