@@ -29,26 +29,12 @@ export function AppShell() {
   const isStaff = institutionRoles.includes("staff");
 
   const { data: myInstitutions } = useQuery({
-    queryKey: ["institutions", "assigned", userId],
-    enabled: isSuperAdmin && !!userId,
+    queryKey: ["institutions", isSuperAdmin ? "all" : "assigned", userId],
+    enabled: isSuperAdmin,
     queryFn: async () => {
-      if (!userId) return [] as InstitutionOption[];
-
-      const res = await supabase
-        .from("institution_users")
-        .select("institution_id, institutions(id, name)")
-        .eq("user_id", userId);
-
-      const opts = (res.data ?? [])
-        .map((row) => {
-          const inst = (row as any).institutions as { id: string; name: string } | null;
-          return inst ? { id: inst.id, name: inst.name } : null;
-        })
-        .filter(Boolean) as InstitutionOption[];
-
-      // stable sort for UX
-      opts.sort((a, b) => a.name.localeCompare(b.name));
-      return opts;
+      // super_admin should be able to pick ANY institution (not only ones with explicit membership rows)
+      const res = await supabase.from("institutions").select("id,name").order("name");
+      return (res.data ?? []) as InstitutionOption[];
     },
     staleTime: 5 * 60 * 1000,
   });
