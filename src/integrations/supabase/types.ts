@@ -764,6 +764,20 @@ export type Database = {
         }
         Relationships: []
       }
+      monthly_report_print: {
+        Row: {
+          cl_remaining: number | null
+          cl_used: number | null
+          header_line_1: string | null
+          header_line_2: string | null
+          month: string | null
+          name: string | null
+          off_balance: number | null
+          off_earned: number | null
+          off_used: number | null
+        }
+        Relationships: []
+      }
       monthly_roster_grid: {
         Row: {
           duty_date: string | null
