@@ -29,6 +29,8 @@ import RosterPrint from "./pages/app/RosterPrint";
 import LeaveManagement from "./pages/app/LeaveManagement";
 import ReportsMonthly from "./pages/app/ReportsMonthly";
 import PrintMonthlyReport from "./pages/print/PrintMonthlyReport";
+import PrintClOverview from "./pages/print/PrintClOverview";
+import PrintOffOverview from "./pages/print/PrintOffOverview";
 
 const queryClient = new QueryClient();
 
@@ -46,8 +48,24 @@ const App = () => (
                 <Route path="/login" element={<Login />} />
                 <Route path="/signup" element={<Signup />} />
 
-                {/* Standalone print routes (NO AppShell / NO auth wrappers) */}
+                {/* Standalone print routes (NO AppShell) */}
                 <Route path="/print/monthly/:month" element={<PrintMonthlyReport />} />
+                <Route
+                  path="/print/cl-overview"
+                  element={
+                    <RequireAuth>
+                      <PrintClOverview />
+                    </RequireAuth>
+                  }
+                />
+                <Route
+                  path="/print/off-overview"
+                  element={
+                    <RequireAuth>
+                      <PrintOffOverview />
+                    </RequireAuth>
+                  }
+                />
 
                 <Route
                   path="/app"
@@ -109,14 +127,7 @@ const App = () => (
                       </RoleGate>
                     }
                   />
-                  <Route
-                    path="holidays"
-                    element={
-                      <RoleGate requireAnyInstitutionRole={["lab_incharge"]}>
-                        <HolidaysCalendar />
-                      </RoleGate>
-                    }
-                  />
+                  <Route path="holidays" element={<HolidaysCalendar />} />
                   <Route
                     path="leaves"
                     element={
