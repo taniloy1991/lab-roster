@@ -28,6 +28,7 @@ import RosterCalendar from "./pages/app/RosterCalendar";
 import RosterPrint from "./pages/app/RosterPrint";
 import LeaveManagement from "./pages/app/LeaveManagement";
 import ReportsMonthly from "./pages/app/ReportsMonthly";
+import PrintMonthlyReport from "./pages/print/PrintMonthlyReport";
 
 const queryClient = new QueryClient();
 
@@ -44,6 +45,9 @@ const App = () => (
                 <Route path="/" element={<Index />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/signup" element={<Signup />} />
+
+                {/* Standalone print routes (NO AppShell / NO auth wrappers) */}
+                <Route path="/print/monthly/:month" element={<PrintMonthlyReport />} />
 
                 <Route
                   path="/app"

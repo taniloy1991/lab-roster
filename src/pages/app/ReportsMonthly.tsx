@@ -90,8 +90,13 @@ export default function ReportsMonthly() {
           </div>
           <div className="flex items-center gap-2">
             <Input type="month" value={month} onChange={(e) => setMonth(e.target.value)} className="w-[190px]" />
-            <Button onClick={() => window.print()} variant="outline">
-              Print / PDF
+            <Button
+              onClick={() => {
+                window.open(`/print/monthly/${month}`, "_blank", "noopener,noreferrer");
+              }}
+              variant="outline"
+            >
+              Print Monthly Report
             </Button>
             <Button onClick={load} disabled={loading}>
               {loading ? "Loading…" : "Refresh"}

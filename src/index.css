@@ -140,5 +140,13 @@
       z-index: 9999;
       color: hsl(var(--muted-foreground));
     }
+
+    /* Monthly report standalone print: hide any app chrome just in case */
+    .monthly-print-page .sidebar,
+    .monthly-print-page nav,
+    .monthly-print-page header,
+    .monthly-print-page .app-shell {
+      display: none !important;
+    }
   }
 }
