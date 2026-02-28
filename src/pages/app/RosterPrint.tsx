@@ -81,14 +81,18 @@ export default function RosterPrint() {
       .order("created_at", { ascending: true });
 
     const byDate = new Map<string, { morning: string[]; evening: string[]; night: string[] }>();
-    const leaveByDate = new Map<string, VisualLeaveType>();
+    const leaveByDate = new Map<string, string>();
 
     for (const r of (rosterRes.data ?? []) as any[]) {
       const d = String(r.duty_date);
       if (hasSelection && !selectedSet.has(d)) continue;
 
-      if (r.shift == null && r.staff_id == null) {
-        leaveByDate.set(d, (r.leave_type ?? "none") as VisualLeaveType);
+      if (r.shift == null) {
+        const t = (r.leave_type ?? "none") as VisualLeaveType;
+        const tLabel = leaveLabel[t] ?? "None";
+        const name = r.staff?.name ?? "—";
+        // New behavior: leave rows can have staff_id; show "Name — Type"
+        leaveByDate.set(d, r.staff_id ? `${name} — ${tLabel}` : tLabel);
         continue;
       }
 
@@ -107,7 +111,7 @@ export default function RosterPrint() {
     setRows(
       dates.map((d) => {
         const v = byDate.get(d) ?? { morning: [], evening: [], night: [] };
-        const leave = leaveLabel[leaveByDate.get(d) ?? "none"] ?? "None";
+        const leave = leaveByDate.get(d) ?? "—";
 
         return {
           duty_date: d,
@@ -165,7 +169,7 @@ export default function RosterPrint() {
                 <th className="py-3 pr-4">Morning (Staff — Responsibility)</th>
                 <th className="py-3 pr-4">Evening (Staff — Responsibility)</th>
                 <th className="py-3 pr-4">Night (Staff — Responsibility)</th>
-                <th className="py-3 pr-4">Leave (Visual Leave Type)</th>
+                <th className="py-3 pr-4">Leave (Staff — Type)</th>
               </tr>
             </thead>
             <tbody>

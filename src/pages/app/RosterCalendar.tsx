@@ -51,8 +51,16 @@ export default function RosterCalendar() {
     return { start, end };
   }, [month]);
 
-  const { loading, monthDays, reload, byDateShift, leaveByDate, upsertStaffEntry, removeEntry, setLeaveForDate } =
-    useRosterVisualMonth({ activeInstitutionId, month });
+  const {
+    loading,
+    monthDays,
+    reload,
+    byDateShift,
+    leaveStaffByDate,
+    upsertStaffEntry,
+    removeEntry,
+    setLeaveForDate,
+  } = useRosterVisualMonth({ activeInstitutionId, month });
 
   const [staff, setStaff] = useState<StaffRow[]>([]);
   const staffName = useMemo(() => new Map(staff.map((s) => [s.id, s.name])), [staff]);
@@ -141,7 +149,7 @@ export default function RosterCalendar() {
     nav(`/print/roster?${qs.toString()}`);
   };
 
-  // Dialog state for Select Staff
+  // Dialog state for Shift assignment
   const [dlgOpen, setDlgOpen] = useState(false);
   const [dlgState, setDlgState] = useState<{
     dutyDate: string;
@@ -153,11 +161,25 @@ export default function RosterCalendar() {
   const [dlgNote, setDlgNote] = useState("");
   const [dlgSaving, setDlgSaving] = useState(false);
 
+  // Dialog state for Leave assignment (single staff/date)
+  const [leaveDlgOpen, setLeaveDlgOpen] = useState(false);
+  const [leaveDlgDutyDate, setLeaveDlgDutyDate] = useState<string>("");
+  const [leaveDlgStaffId, setLeaveDlgStaffId] = useState<string>("");
+  const [leaveDlgType, setLeaveDlgType] = useState<VisualLeaveType>("none");
+  const [leaveDlgSaving, setLeaveDlgSaving] = useState(false);
+
   const openAssign = (p: { dutyDate: string; shift: Shift; entry?: VisualEntry }) => {
     setDlgState({ dutyDate: p.dutyDate, shift: p.shift, entry: p.entry });
     setDlgStaffId(p.entry?.staff_id ?? "");
     setDlgNote(p.entry?.responsibility_note ?? "");
     setDlgOpen(true);
+  };
+
+  const openLeaveAssign = (p: { dutyDate: string; entry?: { entryId: string; staffId: string | null; leaveType: VisualLeaveType } }) => {
+    setLeaveDlgDutyDate(p.dutyDate);
+    setLeaveDlgStaffId(p.entry?.staffId ?? "");
+    setLeaveDlgType(p.entry?.leaveType ?? "none");
+    setLeaveDlgOpen(true);
   };
 
   const saveAssign = async () => {
@@ -176,6 +198,20 @@ export default function RosterCalendar() {
       setDlgOpen(false);
     } finally {
       setDlgSaving(false);
+    }
+  };
+
+  const saveLeaveAssign = async () => {
+    if (!activeInstitutionId) return;
+    if (!leaveDlgDutyDate) return;
+    if (!leaveDlgStaffId) return;
+
+    setLeaveDlgSaving(true);
+    try {
+      await setLeaveForDate({ dutyDate: leaveDlgDutyDate, staffId: leaveDlgStaffId, leaveType: leaveDlgType });
+      setLeaveDlgOpen(false);
+    } finally {
+      setLeaveDlgSaving(false);
     }
   };
 
@@ -233,9 +269,10 @@ export default function RosterCalendar() {
             onToggleDate={(d) => void toggleDate(d)}
             onToggleAll={() => void selectAll()}
             byDateShift={byDateShift}
-            leaveByDate={leaveByDate}
+            leaveStaffByDate={leaveStaffByDate}
             leaveOptions={leaveOptions}
             onSetLeave={(p) => void setLeaveForDate(p)}
+            onOpenLeaveAssign={openLeaveAssign}
             onOpenAssign={openAssign}
             onRemoveEntry={(id) => void removeEntry(id)}
           />
@@ -246,9 +283,7 @@ export default function RosterCalendar() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{dlgState?.entry ? "Edit staff" : "Select staff"}</DialogTitle>
-            <DialogDescription>
-              {dlgState ? `${dlgState.dutyDate} • ${dlgState.shift}` : ""}
-            </DialogDescription>
+            <DialogDescription>{dlgState ? `${dlgState.dutyDate} • ${dlgState.shift}` : ""}</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
@@ -281,6 +316,55 @@ export default function RosterCalendar() {
           <DialogFooter>
             <Button onClick={saveAssign} disabled={!dlgState || !dlgStaffId || dlgSaving}>
               {dlgSaving ? "Saving…" : "Save"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={leaveDlgOpen} onOpenChange={setLeaveDlgOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Leave assignment</DialogTitle>
+            <DialogDescription>{leaveDlgDutyDate ? `${leaveDlgDutyDate}` : ""}</DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Staff</Label>
+              <Select value={leaveDlgStaffId} onValueChange={setLeaveDlgStaffId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select staff…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {staff.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Leave type (visual)</Label>
+              <Select value={leaveDlgType} onValueChange={(v) => setLeaveDlgType(v as VisualLeaveType)} disabled={!leaveDlgStaffId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select leave…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {leaveOptions.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>
+                      {o.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button onClick={saveLeaveAssign} disabled={!leaveDlgDutyDate || !leaveDlgStaffId || leaveDlgSaving}>
+              {leaveDlgSaving ? "Saving…" : "Save"}
             </Button>
           </DialogFooter>
         </DialogContent>

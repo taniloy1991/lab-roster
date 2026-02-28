@@ -88,28 +88,25 @@ export function useRosterVisualMonth(params: { activeInstitutionId: string | nul
   );
 
   const setLeaveForDate = useCallback(
-    async (p: { dutyDate: string; leaveType: VisualLeaveType }) => {
+    async (p: { dutyDate: string; leaveType: VisualLeaveType; staffId?: string }) => {
       if (!activeInstitutionId) return;
 
-      // Enforce single leave row/date: delete then insert (idempotent)
+      // Single leave staff/date: delete any existing leave row for date, then insert one
       await supabase
         .from("roster_visual_entries" as any)
         .delete()
         .eq("institution_id", activeInstitutionId)
         .eq("duty_date", p.dutyDate)
-        .is("shift", null)
-        .is("staff_id", null);
+        .is("shift", null);
 
       if (p.leaveType !== "none") {
         await supabase.from("roster_visual_entries" as any).insert({
           institution_id: activeInstitutionId,
           duty_date: p.dutyDate,
           shift: null,
-          staff_id: null,
+          staff_id: p.staffId ?? null,
           leave_type: p.leaveType,
         });
-      } else {
-        // Store an explicit "none" row or not? Spec says store selection; keep DB clean by storing nothing.
       }
 
       await reload();
@@ -126,10 +123,25 @@ export function useRosterVisualMonth(params: { activeInstitutionId: string | nul
     return map;
   }, [entries]);
 
+  const leaveStaffByDate = useMemo(() => {
+    const map = new Map<string, { entryId: string; staffId: string | null; leaveType: VisualLeaveType }>();
+    for (const e of entries) {
+      if ((e as any).shift == null) {
+        const k = String((e as any).duty_date);
+        map.set(k, {
+          entryId: String((e as any).id),
+          staffId: (e as any).staff_id ? String((e as any).staff_id) : null,
+          leaveType: ((e as any).leave_type ?? "none") as VisualLeaveType,
+        });
+      }
+    }
+    return map;
+  }, [entries]);
+
   const leaveByDate = useMemo(() => {
     const map = new Map<string, VisualLeaveType>();
     for (const e of entries) {
-      if ((e as any).shift == null && (e as any).staff_id == null) {
+      if ((e as any).shift == null) {
         const k = String((e as any).duty_date);
         map.set(k, ((e as any).leave_type ?? "none") as VisualLeaveType);
       }
@@ -161,5 +173,6 @@ export function useRosterVisualMonth(params: { activeInstitutionId: string | nul
     byDate,
     byDateShift,
     leaveByDate,
+    leaveStaffByDate,
   };
 }
