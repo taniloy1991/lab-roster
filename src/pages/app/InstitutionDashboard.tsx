@@ -33,7 +33,7 @@ type MemberRow = {
 
 export default function InstitutionDashboard() {
   const navigate = useNavigate();
-  const { loading, session, userId, activeInstitutionId, institutionRoles } = useAuth();
+  const { loading, session, userId, activeInstitutionId, institutionRoles, globalRoles } = useAuth();
 
   const [pageLoading, setPageLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -48,7 +48,10 @@ export default function InstitutionDashboard() {
   const [roleBusy, setRoleBusy] = useState(false);
   const [roleMessage, setRoleMessage] = useState<string | null>(null);
 
-  const canAddStaff = useMemo(() => institutionRoles.includes("lab_incharge"), [institutionRoles]);
+  const canAddStaff = useMemo(
+    () => globalRoles.includes("super_admin") || institutionRoles.includes("lab_incharge"),
+    [globalRoles, institutionRoles],
+  );
 
   const loadDashboard = useCallback(async () => {
     if (!activeInstitutionId) {

@@ -13,8 +13,13 @@ export function RoleGate({
 }) {
   const { loading, session, globalRoles, institutionRoles } = useAuth();
 
+  const isSuperAdmin = globalRoles.includes("super_admin");
+
   if (loading) return null;
   if (!session) return <Navigate to="/login" replace />;
+
+  // super_admin overrides any other restriction
+  if (isSuperAdmin) return <>{children}</>;
 
   if (requireGlobalRole) {
     const ok = globalRoles.includes(requireGlobalRole);
