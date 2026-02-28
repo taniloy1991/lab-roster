@@ -77,6 +77,9 @@ export default function RosterCalendar() {
   }, [activeInstitutionId, month]);
 
   const toggleDate = async (dutyDate: string) => {
+    const wasSelected = selectedDates.has(dutyDate);
+
+    // Optimistic UI update
     setSelectedDates((prev) => {
       const next = new Set(prev);
       if (next.has(dutyDate)) next.delete(dutyDate);
@@ -85,8 +88,7 @@ export default function RosterCalendar() {
     });
 
     // Keep DB in sync (idempotent: delete then insert)
-    const exists = selectedDates.has(dutyDate);
-    if (exists) {
+    if (wasSelected) {
       await supabase.from("selected_roster_dates").delete().eq("duty_date", dutyDate);
     } else {
       await supabase.from("selected_roster_dates").delete().eq("duty_date", dutyDate);
