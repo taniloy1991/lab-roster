@@ -3,6 +3,8 @@ import { format, parseISO } from "date-fns";
 import { useParams } from "react-router-dom";
 
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/providers/AuthProvider";
+import { PrintLayout } from "@/components/print/PrintLayout";
 
 type ClBalanceRow = { staff_id: string | null; name: string | null; remaining_days: number | null };
 type OffBalanceRow = { staff_id: string | null; name: string | null; off_balance: number | null };
@@ -10,6 +12,8 @@ type OffBalanceRow = { staff_id: string | null; name: string | null; off_balance
 type Row = { staffId: string; name: string; clRemaining: number; offBalance: number };
 
 export default function PrintMonthlyReport() {
+  const { activeInstitutionId, session } = useAuth();
+
   const params = useParams();
   const month = (params.month ?? "").trim();
 
@@ -30,18 +34,38 @@ export default function PrintMonthlyReport() {
     let alive = true;
 
     const load = async () => {
+      if (!session || !activeInstitutionId) {
+        setError("Not authorized.");
+        setRows([]);
+        return;
+      }
+
       setLoading(true);
       setError(null);
 
+      // Institution-scoped: start from staff list, then pull balances from views by staff_id.
+      const staffRes = await supabase
+        .from("staff")
+        .select("id,name")
+        .eq("institution_id", activeInstitutionId)
+        .eq("is_active", true)
+        .order("name");
+
+      const staffIds = (staffRes.data ?? []).map((s: any) => String(s.id));
+
       const [clRes, offRes] = await Promise.all([
-        supabase.from("cl_balance_view").select("staff_id,name,remaining_days"),
-        supabase.from("off_balance_view").select("staff_id,name,off_balance"),
+        staffIds.length
+          ? supabase.from("cl_balance_view").select("staff_id,name,remaining_days").in("staff_id", staffIds)
+          : Promise.resolve({ data: [], error: null } as any),
+        staffIds.length
+          ? supabase.from("off_balance_view").select("staff_id,name,off_balance").in("staff_id", staffIds)
+          : Promise.resolve({ data: [], error: null } as any),
       ]);
 
       if (!alive) return;
 
-      if (clRes.error || offRes.error) {
-        setError(clRes.error?.message ?? offRes.error?.message ?? "Failed to load");
+      if (staffRes.error || clRes.error || offRes.error) {
+        setError(staffRes.error?.message ?? clRes.error?.message ?? offRes.error?.message ?? "Failed to load");
         setRows([]);
         setLoading(false);
         return;
@@ -52,27 +76,27 @@ export default function PrintMonthlyReport() {
 
       const map = new Map<string, Row>();
 
-      for (const r of cl) {
-        if (!r.staff_id) continue;
-        map.set(r.staff_id, {
-          staffId: r.staff_id,
-          name: r.name ?? "—",
-          clRemaining: Number(r.remaining_days ?? 0),
+      for (const s of staffRes.data ?? []) {
+        map.set(String((s as any).id), {
+          staffId: String((s as any).id),
+          name: (s as any).name ?? "—",
+          clRemaining: 0,
           offBalance: 0,
         });
       }
 
+      for (const r of cl) {
+        if (!r.staff_id) continue;
+        const cur = map.get(r.staff_id);
+        if (!cur) continue;
+        cur.clRemaining = Number(r.remaining_days ?? 0);
+      }
+
       for (const r of off) {
         if (!r.staff_id) continue;
-        const cur = map.get(r.staff_id) ?? {
-          staffId: r.staff_id,
-          name: r.name ?? "—",
-          clRemaining: 0,
-          offBalance: 0,
-        };
+        const cur = map.get(r.staff_id);
+        if (!cur) continue;
         cur.offBalance = Number(r.off_balance ?? 0);
-        if (r.name && cur.name === "—") cur.name = r.name;
-        map.set(r.staff_id, cur);
       }
 
       setRows(Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name)));
@@ -83,63 +107,61 @@ export default function PrintMonthlyReport() {
     return () => {
       alive = false;
     };
-  }, []);
+  }, [activeInstitutionId, session]);
 
   return (
-    <div className="monthly-print-page min-h-screen bg-background text-foreground">
-      <main className="mx-auto min-h-screen max-w-[210mm] bg-card px-8 py-10 text-card-foreground">
-        <header className="text-center">
-          <div className="text-base font-semibold leading-tight">Department of Microbiology</div>
-          <div className="text-base font-semibold leading-tight">BIRDEM General Hospital</div>
+    <PrintLayout pageClassName="monthly-print-page" className="bg-card">
+      <header className="text-center">
+        <div className="text-base font-semibold leading-tight">Department of Microbiology</div>
+        <div className="text-base font-semibold leading-tight">BIRDEM General Hospital</div>
 
-          <h1 className="mt-6 text-xl font-semibold tracking-tight">{monthTitle}</h1>
-        </header>
+        <h1 className="mt-6 text-xl font-semibold tracking-tight">{monthTitle}</h1>
+      </header>
 
-        <section className="mt-8">
-          {error ? <p className="text-sm text-muted-foreground">{error}</p> : null}
-          {loading ? <p className="text-sm text-muted-foreground">Loading…</p> : null}
+      <section className="mt-8">
+        {error ? <p className="text-sm text-muted-foreground">{error}</p> : null}
+        {loading ? <p className="text-sm text-muted-foreground">Loading…</p> : null}
 
-          <div className="mt-3 overflow-x-auto">
-            <table className="w-full min-w-[520px] text-sm">
-              <thead className="text-left text-xs text-muted-foreground">
-                <tr className="border-b">
-                  <th className="py-3 pr-4">Staff Name</th>
-                  <th className="py-3 pr-4">CL Remaining</th>
-                  <th className="py-3 pr-4">OFF Balance</th>
+        <div className="mt-3 overflow-x-auto">
+          <table className="w-full min-w-[520px] text-sm">
+            <thead className="text-left text-xs text-muted-foreground">
+              <tr className="border-b">
+                <th className="py-3 pr-4">Staff Name</th>
+                <th className="py-3 pr-4">CL Remaining</th>
+                <th className="py-3 pr-4">OFF Balance</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.length === 0 && !loading ? (
+                <tr>
+                  <td colSpan={3} className="py-10 text-center text-muted-foreground">
+                    No data.
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {rows.length === 0 && !loading ? (
-                  <tr>
-                    <td colSpan={3} className="py-10 text-center text-muted-foreground">
-                      No data.
-                    </td>
-                  </tr>
-                ) : null}
+              ) : null}
 
-                {rows.map((r) => (
-                  <tr key={r.staffId} className="border-b last:border-b-0">
-                    <td className="py-3 pr-4 font-medium">{r.name}</td>
-                    <td className="py-3 pr-4 tabular-nums">{r.clRemaining}</td>
-                    <td className="py-3 pr-4 tabular-nums">{r.offBalance}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
+              {rows.map((r) => (
+                <tr key={r.staffId} className="border-b last:border-b-0">
+                  <td className="py-3 pr-4 font-medium">{r.name}</td>
+                  <td className="py-3 pr-4 tabular-nums">{r.clRemaining}</td>
+                  <td className="py-3 pr-4 tabular-nums">{r.offBalance}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
 
-        <section className="mt-10 grid grid-cols-1 gap-8 text-sm sm:grid-cols-2">
-          <div>
-            <div className="text-muted-foreground">Prepared By:</div>
-            <div className="mt-3 border-b border-border" />
-          </div>
-          <div>
-            <div className="text-muted-foreground">Approved By:</div>
-            <div className="mt-3 border-b border-border" />
-          </div>
-        </section>
-      </main>
-    </div>
+      <section className="mt-10 grid grid-cols-1 gap-8 text-sm sm:grid-cols-2">
+        <div>
+          <div className="text-muted-foreground">Prepared By:</div>
+          <div className="mt-3 border-b border-border" />
+        </div>
+        <div>
+          <div className="text-muted-foreground">Approved By:</div>
+          <div className="mt-3 border-b border-border" />
+        </div>
+      </section>
+    </PrintLayout>
   );
 }

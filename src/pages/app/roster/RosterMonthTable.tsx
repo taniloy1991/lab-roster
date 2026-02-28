@@ -2,36 +2,59 @@ import React, { useMemo } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
-import type { Assignment, Shift } from "./types";
+import type { Assignment, Shift, StaffRow } from "./types";
 
 const shifts: Shift[] = ["morning", "evening", "night"];
+
+type LeaveType = "casual" | "off_use" | "general_off" | "government";
+
+const leaveOptions: Array<{ value: LeaveType | "none"; label: string }> = [
+  { value: "none", label: "None" },
+  { value: "casual", label: "Casual (CL)" },
+  { value: "off_use", label: "OFF (use)" },
+  { value: "general_off", label: "General OFF" },
+  { value: "government", label: "Government Holiday" },
+];
 
 export function RosterMonthTable(props: {
   monthDays: string[];
   daysByDate: Map<string, { id: string; duty_date: string }>;
   assignmentsByDayShift: Map<string, Assignment[]>;
+  staff: StaffRow[];
   staffName: Map<string, string>;
   canEdit: boolean;
+  canEditLeaves: boolean;
   selectedDates: Set<string>;
   onToggleDate: (dutyDate: string) => void;
   onToggleAll: () => void;
   onAdd: (params: { dutyDate: string; shift: Shift }) => void;
   onEdit: (params: { dutyDate: string; shift: Shift; assignment: Assignment }) => void;
-  leaveByDate: Map<string, string>;
+  leavesByDateStaff: Map<string, Map<string, LeaveType>>;
+  onSetLeave: (params: { dutyDate: string; staffId: string; leaveType: LeaveType | "none" }) => void;
 }) {
   const {
     monthDays,
     daysByDate,
     assignmentsByDayShift,
+    staff,
     staffName,
     canEdit,
+    canEditLeaves,
     selectedDates,
     onToggleDate,
     onToggleAll,
     onAdd,
     onEdit,
-    leaveByDate,
+    leavesByDateStaff,
+    onSetLeave,
   } = props;
 
   const selection = useMemo(() => {
@@ -81,7 +104,32 @@ export function RosterMonthTable(props: {
                 <div className="font-medium">{dutyDate}</div>
               </td>
               <td className="py-3 pr-4 align-top">
-                <div className="text-xs text-muted-foreground whitespace-pre-wrap">{leaveByDate.get(dutyDate) ?? "—"}</div>
+                <div className="space-y-2">
+                  {staff.map((s) => {
+                    const current = leavesByDateStaff.get(dutyDate)?.get(s.id) ?? "none";
+                    return (
+                      <div key={s.id} className="flex items-center justify-between gap-2">
+                        <div className="min-w-0 text-xs text-muted-foreground truncate">{s.name}</div>
+                        <Select
+                          value={current}
+                          onValueChange={(v) => onSetLeave({ dutyDate, staffId: s.id, leaveType: v as any })}
+                          disabled={!canEditLeaves}
+                        >
+                          <SelectTrigger className="h-8 w-[190px] text-xs">
+                            <SelectValue placeholder="None" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {leaveOptions.map((o) => (
+                              <SelectItem key={o.value} value={o.value}>
+                                {o.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    );
+                  })}
+                </div>
               </td>
 
 
@@ -93,8 +141,9 @@ export function RosterMonthTable(props: {
                       {list.map((a) => {
                         const name = staffName.get(a.staff_id) ?? "Unknown";
                         const note = (a.duty_note ?? "").trim();
-                        const onLeaveText = (leaveByDate.get(dutyDate) ?? "").toLowerCase();
-                        const isLeaveCell = onLeaveText.includes(name.toLowerCase());
+                        const onLeave = leavesByDateStaff.get(dutyDate);
+                        const leaveType = onLeave?.get(a.staff_id) ?? "none";
+                        const isLeaveCell = leaveType !== "none" && leaveType !== "government";
 
                         return (
                           <button
@@ -115,7 +164,6 @@ export function RosterMonthTable(props: {
                             }
                           >
                             <span className="font-medium">{name}</span>
-                            {a.is_extra ? <span className="text-muted-foreground"> · extra</span> : null}
                             {note ? <span className="text-muted-foreground"> — {note}</span> : null}
                             {isLeaveCell ? <span className="ml-1 text-destructive"> · on leave</span> : null}
                           </button>

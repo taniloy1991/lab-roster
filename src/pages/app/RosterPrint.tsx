@@ -9,20 +9,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 import { InstitutionPdfHeader } from "@/components/print/InstitutionPdfHeader";
 
-type SelectedPdfRow = {
-  duty_date: string | null;
-  morning_staff: string | null;
-  evening_staff: string | null;
-  night_staff: string | null;
-  leave_staff: string | null;
-};
+type LeaveType = "casual" | "off_use" | "general_off" | "government";
 
-type MonthGridRow = {
-  duty_date: string | null;
-  morning_staff: string | null;
-  evening_staff: string | null;
-  night_staff: string | null;
-  leave_staff: string | null;
+type PdfRow = {
+  duty_date: string;
+  morning: string;
+  evening: string;
+  night: string;
+  leave: string;
 };
 
 export default function RosterPrint() {
@@ -46,13 +40,13 @@ export default function RosterPrint() {
   }, [month]);
 
   const [loading, setLoading] = useState(false);
-  const [rows, setRows] = useState<SelectedPdfRow[]>([]);
+  const [rows, setRows] = useState<PdfRow[]>([]);
   const [mode, setMode] = useState<"selected" | "month">("month");
 
   const load = async () => {
     setLoading(true);
 
-    // If there are selected dates in selected_roster_dates for this month → use roster_selected_pdf view.
+    // If there are selected dates in selected_roster_dates for this month → use selected mode.
     const selRes = await supabase
       .from("selected_roster_dates")
       .select("duty_date")
@@ -61,21 +55,87 @@ export default function RosterPrint() {
       .limit(1);
 
     const hasSelection = (selRes.data ?? []).length > 0;
+    setMode(hasSelection ? "selected" : "month");
 
-    if (hasSelection) {
-      setMode("selected");
-      const res = await supabase.from("roster_selected_pdf").select("duty_date,morning_staff,evening_staff,night_staff,leave_staff");
-      setRows((res.data ?? []) as SelectedPdfRow[]);
-    } else {
-      setMode("month");
-      const res = await supabase
-        .from("monthly_roster_grid")
-        .select("duty_date,morning_staff,evening_staff,night_staff,leave_staff")
-        .gte("duty_date", format(range.start, "yyyy-MM-dd"))
-        .lte("duty_date", format(range.end, "yyyy-MM-dd"))
-        .order("duty_date", { ascending: true });
-      setRows((res.data ?? []) as MonthGridRow[]);
+    const start = format(range.start, "yyyy-MM-dd");
+    const end = format(range.end, "yyyy-MM-dd");
+
+    // Fetch assignment lines with duty notes
+    const rosterRes = await supabase
+      .from("roster_pdf_view")
+      .select("duty_date,shift,name,duty_note,is_extra")
+      .gte("duty_date", start)
+      .lte("duty_date", end)
+      .order("duty_date", { ascending: true });
+
+    // Fetch leaves (new table)
+    const leavesRes = await supabase
+      .from("staff_leaves")
+      .select("duty_date,staff_id,leave_type, staff:staff_id(name)")
+      .gte("duty_date", start)
+      .lte("duty_date", end);
+
+    // Selected dates list (if any)
+    const selectedRes = hasSelection
+      ? await supabase
+          .from("selected_roster_dates")
+          .select("duty_date")
+          .gte("duty_date", start)
+          .lte("duty_date", end)
+      : null;
+
+    const selectedSet = new Set<string>((selectedRes?.data ?? []).map((r: any) => String(r.duty_date)));
+
+    const byDate = new Map<string, { morning: string[]; evening: string[]; night: string[] }>();
+
+    for (const r of (rosterRes.data ?? []) as any[]) {
+      const d = String(r.duty_date);
+      if (hasSelection && !selectedSet.has(d)) continue;
+
+      const shift = String(r.shift) as "morning" | "evening" | "night";
+      const name = (r.name ?? "—") as string;
+      const note = String(r.duty_note ?? "").trim();
+      const line = note ? `${name} — ${note}` : name;
+
+      const cur = byDate.get(d) ?? { morning: [], evening: [], night: [] };
+      cur[shift].push(line);
+      byDate.set(d, cur);
     }
+
+    const leaveByDate: Map<string, string[]> = new Map();
+    for (const r of (leavesRes.data ?? []) as any[]) {
+      const d = String(r.duty_date);
+      if (hasSelection && !selectedSet.has(d)) continue;
+
+      const staffName = r.staff?.name ?? "—";
+      const type = String(r.leave_type) as LeaveType;
+      const label =
+        type === "casual"
+          ? "CL"
+          : type === "off_use"
+            ? "OFF"
+            : type === "general_off"
+              ? "General OFF"
+              : "Government";
+
+      const arr = leaveByDate.get(d) ?? [];
+      arr.push(`${staffName} (${label})`);
+      leaveByDate.set(d, arr);
+    }
+
+    const dates = Array.from(byDate.keys()).sort();
+    setRows(
+      dates.map((d) => {
+        const v = byDate.get(d) ?? { morning: [], evening: [], night: [] };
+        return {
+          duty_date: d,
+          morning: v.morning.join("\n") || "—",
+          evening: v.evening.join("\n") || "—",
+          night: v.night.join("\n") || "—",
+          leave: (leaveByDate.get(d) ?? []).join("\n") || "—",
+        };
+      }),
+    );
 
     setLoading(false);
   };
@@ -90,7 +150,7 @@ export default function RosterPrint() {
   if (!canView) return <Navigate to="/app" replace />;
 
   return (
-    <>
+    <div className="roster-print-page">
       <div className="pdf-header hidden print:block mb-6">
         <InstitutionPdfHeader />
       </div>
@@ -119,20 +179,20 @@ export default function RosterPrint() {
               <thead className="text-left text-xs text-muted-foreground">
                 <tr className="border-b">
                   <th className="py-3 pr-4">Date</th>
-                  <th className="py-3 pr-4">Morning</th>
-                  <th className="py-3 pr-4">Evening</th>
-                  <th className="py-3 pr-4">Night</th>
-                  <th className="py-3 pr-4">Leave (CL/OFF)</th>
+                  <th className="py-3 pr-4">Morning (Staff — Responsibility)</th>
+                  <th className="py-3 pr-4">Evening (Staff — Responsibility)</th>
+                  <th className="py-3 pr-4">Night (Staff — Responsibility)</th>
+                  <th className="py-3 pr-4">Leave (CL/OFF type)</th>
                 </tr>
               </thead>
               <tbody>
                 {(rows ?? []).map((r) => (
                   <tr key={String(r.duty_date)} className="border-b last:border-b-0">
-                    <td className="py-3 pr-4 tabular-nums font-medium">{r.duty_date ?? "—"}</td>
-                    <td className="py-3 pr-4 align-top">{r.morning_staff?.trim() || "—"}</td>
-                    <td className="py-3 pr-4 align-top">{r.evening_staff?.trim() || "—"}</td>
-                    <td className="py-3 pr-4 align-top">{r.night_staff?.trim() || "—"}</td>
-                    <td className="py-3 pr-4 align-top">{r.leave_staff?.trim() || "—"}</td>
+                    <td className="py-3 pr-4 tabular-nums font-medium">{r.duty_date}</td>
+                    <td className="py-3 pr-4 align-top whitespace-pre-wrap">{r.morning}</td>
+                    <td className="py-3 pr-4 align-top whitespace-pre-wrap">{r.evening}</td>
+                    <td className="py-3 pr-4 align-top whitespace-pre-wrap">{r.night}</td>
+                    <td className="py-3 pr-4 align-top whitespace-pre-wrap">{r.leave}</td>
                   </tr>
                 ))}
               </tbody>
@@ -140,6 +200,6 @@ export default function RosterPrint() {
           </CardContent>
         </Card>
       </div>
-    </>
+    </div>
   );
 }
