@@ -83,7 +83,16 @@ export default function HolidaysCalendar() {
     setLoading(false);
 
     if (res.error) {
-      setError(res.error.message);
+      // Friendly duplicate message (new uniqueness rules)
+      if ((res.error as any).code === "23505") {
+        setError(
+          holidayType === "government"
+            ? "Government holiday already exists for this date."
+            : "This staff already has a holiday/leave entry for this date.",
+        );
+      } else {
+        setError(res.error.message);
+      }
       return;
     }
 

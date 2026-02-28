@@ -694,6 +694,86 @@ export type Database = {
           },
         ]
       }
+      staff_leaves: {
+        Row: {
+          created_at: string
+          duty_date: string
+          id: string
+          institution_id: string
+          leave_type: Database["public"]["Enums"]["staff_leave_type"]
+          staff_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          duty_date: string
+          id?: string
+          institution_id: string
+          leave_type: Database["public"]["Enums"]["staff_leave_type"]
+          staff_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          duty_date?: string
+          id?: string
+          institution_id?: string
+          leave_type?: Database["public"]["Enums"]["staff_leave_type"]
+          staff_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_leaves_institution_id_fkey"
+            columns: ["institution_id"]
+            isOneToOne: false
+            referencedRelation: "institutions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_leaves_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "cl_balance_view"
+            referencedColumns: ["staff_id"]
+          },
+          {
+            foreignKeyName: "staff_leaves_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "monthly_leave_summary"
+            referencedColumns: ["staff_id"]
+          },
+          {
+            foreignKeyName: "staff_leaves_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "off_balance_view"
+            referencedColumns: ["staff_id"]
+          },
+          {
+            foreignKeyName: "staff_leaves_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "smart_shift_priority"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_leaves_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_leaves_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff_monthly_duty_summary"
+            referencedColumns: ["staff_id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -929,6 +1009,7 @@ export type Database = {
       leave_type: "casual" | "off"
       off_ledger_type: "earn" | "use"
       roster_shift: "morning" | "evening" | "night"
+      staff_leave_type: "casual" | "off_use" | "general_off" | "government"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1062,6 +1143,7 @@ export const Constants = {
       leave_type: ["casual", "off"],
       off_ledger_type: ["earn", "use"],
       roster_shift: ["morning", "evening", "night"],
+      staff_leave_type: ["casual", "off_use", "general_off", "government"],
     },
   },
 } as const
