@@ -76,6 +76,13 @@ export type Database = {
             foreignKeyName: "casual_leave_ledger_staff_id_fkey"
             columns: ["staff_id"]
             isOneToOne: false
+            referencedRelation: "general_off_balance_dynamic"
+            referencedColumns: ["staff_id"]
+          },
+          {
+            foreignKeyName: "casual_leave_ledger_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
             referencedRelation: "monthly_leave_summary"
             referencedColumns: ["staff_id"]
           },
@@ -102,6 +109,96 @@ export type Database = {
           },
           {
             foreignKeyName: "casual_leave_ledger_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff_monthly_duty_summary"
+            referencedColumns: ["staff_id"]
+          },
+        ]
+      }
+      cl_transactions: {
+        Row: {
+          created_at: string
+          end_date: string
+          id: string
+          institution_id: string
+          staff_id: string
+          start_date: string
+          total_days: number
+          year: number
+        }
+        Insert: {
+          created_at?: string
+          end_date: string
+          id?: string
+          institution_id: string
+          staff_id: string
+          start_date: string
+          total_days: number
+          year: number
+        }
+        Update: {
+          created_at?: string
+          end_date?: string
+          id?: string
+          institution_id?: string
+          staff_id?: string
+          start_date?: string
+          total_days?: number
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cl_transactions_institution_id_fkey"
+            columns: ["institution_id"]
+            isOneToOne: false
+            referencedRelation: "institutions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cl_transactions_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "cl_balance_view"
+            referencedColumns: ["staff_id"]
+          },
+          {
+            foreignKeyName: "cl_transactions_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "general_off_balance_dynamic"
+            referencedColumns: ["staff_id"]
+          },
+          {
+            foreignKeyName: "cl_transactions_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "monthly_leave_summary"
+            referencedColumns: ["staff_id"]
+          },
+          {
+            foreignKeyName: "cl_transactions_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "off_balance_view"
+            referencedColumns: ["staff_id"]
+          },
+          {
+            foreignKeyName: "cl_transactions_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "smart_shift_priority"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cl_transactions_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cl_transactions_staff_id_fkey"
             columns: ["staff_id"]
             isOneToOne: false
             referencedRelation: "staff_monthly_duty_summary"
@@ -162,6 +259,13 @@ export type Database = {
             foreignKeyName: "compensatory_off_ledger_staff_id_fkey"
             columns: ["staff_id"]
             isOneToOne: false
+            referencedRelation: "general_off_balance_dynamic"
+            referencedColumns: ["staff_id"]
+          },
+          {
+            foreignKeyName: "compensatory_off_ledger_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
             referencedRelation: "monthly_leave_summary"
             referencedColumns: ["staff_id"]
           },
@@ -188,6 +292,180 @@ export type Database = {
           },
           {
             foreignKeyName: "compensatory_off_ledger_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff_monthly_duty_summary"
+            referencedColumns: ["staff_id"]
+          },
+        ]
+      }
+      general_off_deduct: {
+        Row: {
+          created_at: string
+          days_deducted: number
+          end_date: string
+          id: string
+          institution_id: string
+          staff_id: string
+          start_date: string
+        }
+        Insert: {
+          created_at?: string
+          days_deducted: number
+          end_date: string
+          id?: string
+          institution_id: string
+          staff_id: string
+          start_date: string
+        }
+        Update: {
+          created_at?: string
+          days_deducted?: number
+          end_date?: string
+          id?: string
+          institution_id?: string
+          staff_id?: string
+          start_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "general_off_deduct_institution_id_fkey"
+            columns: ["institution_id"]
+            isOneToOne: false
+            referencedRelation: "institutions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "general_off_deduct_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "cl_balance_view"
+            referencedColumns: ["staff_id"]
+          },
+          {
+            foreignKeyName: "general_off_deduct_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "general_off_balance_dynamic"
+            referencedColumns: ["staff_id"]
+          },
+          {
+            foreignKeyName: "general_off_deduct_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "monthly_leave_summary"
+            referencedColumns: ["staff_id"]
+          },
+          {
+            foreignKeyName: "general_off_deduct_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "off_balance_view"
+            referencedColumns: ["staff_id"]
+          },
+          {
+            foreignKeyName: "general_off_deduct_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "smart_shift_priority"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "general_off_deduct_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "general_off_deduct_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff_monthly_duty_summary"
+            referencedColumns: ["staff_id"]
+          },
+        ]
+      }
+      general_off_earn: {
+        Row: {
+          created_at: string
+          days_earned: number
+          end_date: string
+          id: string
+          institution_id: string
+          staff_id: string
+          start_date: string
+        }
+        Insert: {
+          created_at?: string
+          days_earned: number
+          end_date: string
+          id?: string
+          institution_id: string
+          staff_id: string
+          start_date: string
+        }
+        Update: {
+          created_at?: string
+          days_earned?: number
+          end_date?: string
+          id?: string
+          institution_id?: string
+          staff_id?: string
+          start_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "general_off_earn_institution_id_fkey"
+            columns: ["institution_id"]
+            isOneToOne: false
+            referencedRelation: "institutions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "general_off_earn_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "cl_balance_view"
+            referencedColumns: ["staff_id"]
+          },
+          {
+            foreignKeyName: "general_off_earn_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "general_off_balance_dynamic"
+            referencedColumns: ["staff_id"]
+          },
+          {
+            foreignKeyName: "general_off_earn_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "monthly_leave_summary"
+            referencedColumns: ["staff_id"]
+          },
+          {
+            foreignKeyName: "general_off_earn_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "off_balance_view"
+            referencedColumns: ["staff_id"]
+          },
+          {
+            foreignKeyName: "general_off_earn_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "smart_shift_priority"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "general_off_earn_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "general_off_earn_staff_id_fkey"
             columns: ["staff_id"]
             isOneToOne: false
             referencedRelation: "staff_monthly_duty_summary"
@@ -260,6 +538,13 @@ export type Database = {
             columns: ["staff_id"]
             isOneToOne: false
             referencedRelation: "cl_balance_view"
+            referencedColumns: ["staff_id"]
+          },
+          {
+            foreignKeyName: "holidays_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "general_off_balance_dynamic"
             referencedColumns: ["staff_id"]
           },
           {
@@ -446,6 +731,13 @@ export type Database = {
             foreignKeyName: "leave_requests_staff_id_fkey"
             columns: ["staff_id"]
             isOneToOne: false
+            referencedRelation: "general_off_balance_dynamic"
+            referencedColumns: ["staff_id"]
+          },
+          {
+            foreignKeyName: "leave_requests_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
             referencedRelation: "monthly_leave_summary"
             referencedColumns: ["staff_id"]
           },
@@ -602,6 +894,13 @@ export type Database = {
             foreignKeyName: "roster_shift_assignments_staff_id_fkey"
             columns: ["staff_id"]
             isOneToOne: false
+            referencedRelation: "general_off_balance_dynamic"
+            referencedColumns: ["staff_id"]
+          },
+          {
+            foreignKeyName: "roster_shift_assignments_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
             referencedRelation: "monthly_leave_summary"
             referencedColumns: ["staff_id"]
           },
@@ -741,6 +1040,13 @@ export type Database = {
             foreignKeyName: "staff_leaves_staff_id_fkey"
             columns: ["staff_id"]
             isOneToOne: false
+            referencedRelation: "general_off_balance_dynamic"
+            referencedColumns: ["staff_id"]
+          },
+          {
+            foreignKeyName: "staff_leaves_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
             referencedRelation: "monthly_leave_summary"
             referencedColumns: ["staff_id"]
           },
@@ -805,6 +1111,73 @@ export type Database = {
       }
     }
     Views: {
+      cl_balance_dynamic: {
+        Row: {
+          institution_id: string | null
+          remaining_days: number | null
+          staff_id: string | null
+          used_days: number | null
+          year: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cl_transactions_institution_id_fkey"
+            columns: ["institution_id"]
+            isOneToOne: false
+            referencedRelation: "institutions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cl_transactions_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "cl_balance_view"
+            referencedColumns: ["staff_id"]
+          },
+          {
+            foreignKeyName: "cl_transactions_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "general_off_balance_dynamic"
+            referencedColumns: ["staff_id"]
+          },
+          {
+            foreignKeyName: "cl_transactions_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "monthly_leave_summary"
+            referencedColumns: ["staff_id"]
+          },
+          {
+            foreignKeyName: "cl_transactions_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "off_balance_view"
+            referencedColumns: ["staff_id"]
+          },
+          {
+            foreignKeyName: "cl_transactions_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "smart_shift_priority"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cl_transactions_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cl_transactions_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff_monthly_duty_summary"
+            referencedColumns: ["staff_id"]
+          },
+        ]
+      }
       cl_balance_view: {
         Row: {
           name: string | null
@@ -814,6 +1187,24 @@ export type Database = {
           yearly_quota: number | null
         }
         Relationships: []
+      }
+      general_off_balance_dynamic: {
+        Row: {
+          institution_id: string | null
+          remaining_balance: number | null
+          staff_id: string | null
+          total_earned: number | null
+          total_used: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_institution_id_fkey"
+            columns: ["institution_id"]
+            isOneToOne: false
+            referencedRelation: "institutions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       monthly_clean_pdf: {
         Row: {
@@ -965,6 +1356,10 @@ export type Database = {
       }
     }
     Functions: {
+      _date_range_days_inclusive: {
+        Args: { p_end: string; p_start: string }
+        Returns: number
+      }
       get_my_institution_id: { Args: never; Returns: string }
       get_single_staff_summary: {
         Args: { p_staff_id: string }
