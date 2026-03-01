@@ -19,7 +19,6 @@ export default function AppHome() {
   }
 
   if (institutionRoles.includes("lab_incharge")) return <Navigate to="/app/lab" replace />;
-  if (institutionRoles.includes("staff")) return <Navigate to="/app/me" replace />;
 
   return <Navigate to="/app/dashboard" replace />;
 }
