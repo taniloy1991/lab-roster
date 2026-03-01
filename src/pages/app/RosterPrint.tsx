@@ -300,7 +300,7 @@ export default function RosterPrint() {
         </div>
       </section>
 
-      <section className="mt-10">
+      <section className="mt-6 print:mt-8 print:break-inside-avoid">
         <BirdemMicrobiologySignatures />
       </section>
     </PrintLayout>

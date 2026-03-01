@@ -7,6 +7,7 @@ import { useAuth } from "@/providers/AuthProvider";
 import { PrintLayout } from "@/components/print/PrintLayout";
 import { InstitutionPdfHeader } from "@/components/print/InstitutionPdfHeader";
 import { BirdemMicrobiologySignatures } from "@/components/print/BirdemMicrobiologySignatures";
+import { Button } from "@/components/ui/button";
 
 type ClBalanceRow = { staff_id: string | null; name: string | null; remaining_days: number | null };
 type OffBalanceRow = { staff_id: string | null; name: string | null; off_balance: number | null };
@@ -14,6 +15,8 @@ type OffBalanceRow = { staff_id: string | null; name: string | null; off_balance
 type ClTx = { staff_id: string; start_date: string; end_date: string; total_days: number };
 type OffEarnTx = { staff_id: string; start_date: string; end_date: string; days_earned: number };
 type OffUseTx = { staff_id: string; start_date: string; end_date: string; days_deducted: number };
+
+type HolidayTx = { staff_id: string; holiday_date: string; holiday_type: string; name: string };
 
 type Row = {
   staffId: string;
@@ -23,6 +26,7 @@ type Row = {
   clTxMonth: ClTx[];
   offEarnMonth: OffEarnTx[];
   offUseMonth: OffUseTx[];
+  holidaysMonth: HolidayTx[];
 };
 
 export default function PrintMonthlyReport() {
@@ -82,7 +86,7 @@ export default function PrintMonthlyReport() {
 
       const staffIds = (staffRes.data ?? []).map((s: any) => String(s.id));
 
-      const [clRes, offRes, clTxRes, offEarnRes, offUseRes] = await Promise.all([
+      const [clRes, offRes, clTxRes, offEarnRes, offUseRes, holRes] = await Promise.all([
         staffIds.length
           ? supabase.from("cl_balance_view").select("staff_id,name,remaining_days").in("staff_id", staffIds)
           : Promise.resolve({ data: [], error: null } as any),
@@ -120,11 +124,29 @@ export default function PrintMonthlyReport() {
               .gte("end_date", startStr)
               .order("start_date", { ascending: true })
           : Promise.resolve({ data: [], error: null } as any),
+        staffIds.length
+          ? supabase
+              .from("holidays")
+              .select("staff_id,holiday_date,holiday_type,name")
+              .eq("institution_id", activeInstitutionId)
+              .in("staff_id", staffIds)
+              .gte("holiday_date", startStr)
+              .lte("holiday_date", endStr)
+              .order("holiday_date", { ascending: true })
+          : Promise.resolve({ data: [], error: null } as any),
       ]);
 
       if (!alive) return;
 
-      if (staffRes.error || clRes.error || offRes.error || clTxRes.error || offEarnRes.error || offUseRes.error) {
+      if (
+        staffRes.error ||
+        clRes.error ||
+        offRes.error ||
+        clTxRes.error ||
+        offEarnRes.error ||
+        offUseRes.error ||
+        holRes.error
+      ) {
         setError(
           staffRes.error?.message ??
             clRes.error?.message ??
@@ -132,6 +154,7 @@ export default function PrintMonthlyReport() {
             clTxRes.error?.message ??
             offEarnRes.error?.message ??
             offUseRes.error?.message ??
+            holRes.error?.message ??
             "Failed to load",
         );
         setRows([]);
@@ -144,6 +167,7 @@ export default function PrintMonthlyReport() {
       const clTx = (clTxRes.data ?? []) as any[];
       const offEarn = (offEarnRes.data ?? []) as any[];
       const offUse = (offUseRes.data ?? []) as any[];
+      const hol = (holRes.data ?? []) as any[];
 
       const map = new Map<string, Row>();
 
@@ -156,6 +180,7 @@ export default function PrintMonthlyReport() {
           clTxMonth: [],
           offEarnMonth: [],
           offUseMonth: [],
+          holidaysMonth: [],
         });
       }
 
@@ -209,6 +234,20 @@ export default function PrintMonthlyReport() {
         });
       }
 
+      for (const t of hol) {
+        const sid = String(t.staff_id ?? "");
+        const cur = map.get(sid);
+        if (!cur) continue;
+        const holidayType = String(t.holiday_type ?? "").trim();
+        if (holidayType !== "casual" && holidayType !== "general_off") continue;
+        cur.holidaysMonth.push({
+          staff_id: sid,
+          holiday_date: String(t.holiday_date),
+          holiday_type: holidayType,
+          name: String(t.name ?? ""),
+        });
+      }
+
       setRows(Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name)));
       setLoading(false);
     };
@@ -225,6 +264,14 @@ export default function PrintMonthlyReport() {
         <InstitutionPdfHeader />
         <h1 className="mt-6 text-xl font-semibold tracking-tight">{monthTitle}</h1>
       </header>
+
+      <section className="mt-6 print:hidden">
+        <div className="flex items-center justify-end gap-2">
+          <Button variant="outline" onClick={() => window.print()}>
+            Print / Save as PDF
+          </Button>
+        </div>
+      </section>
 
       <section className="mt-8">
         {error ? <p className="text-sm text-muted-foreground">{error}</p> : null}
@@ -264,9 +311,7 @@ export default function PrintMonthlyReport() {
         {rows.map((r, idx) => (
           <section
             key={r.staffId}
-            className={
-              "rounded-md border border-border p-4 " + (idx === 0 ? "" : "print:[break-before:page]")
-            }
+            className={"rounded-md border border-border p-4 " + (idx === 0 ? "" : "print:[break-before:page]")}
           >
             <header className="flex items-baseline justify-between gap-3">
               <div className="text-base font-semibold">{r.name}</div>
@@ -370,11 +415,37 @@ export default function PrintMonthlyReport() {
                 </div>
               </div>
             </div>
+
+            {r.holidaysMonth.length ? (
+              <div className="mt-6">
+                <div className="text-sm font-semibold">Holidays inputs (this month)</div>
+                <div className="mt-2 overflow-x-auto">
+                  <table className="w-full min-w-[520px] text-xs">
+                    <thead className="text-left text-muted-foreground">
+                      <tr className="border-b">
+                        <th className="py-2 pr-3">Date</th>
+                        <th className="py-2 pr-3">Type</th>
+                        <th className="py-2 pr-3">Note</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {r.holidaysMonth.map((h, i) => (
+                        <tr key={i} className="border-b last:border-b-0">
+                          <td className="py-2 pr-3 tabular-nums">{h.holiday_date}</td>
+                          <td className="py-2 pr-3">{h.holiday_type === "casual" ? "CL" : "General OFF"}</td>
+                          <td className="py-2 pr-3">{h.name || "—"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ) : null}
           </section>
         ))}
       </section>
 
-      <BirdemMicrobiologySignatures />
+      <BirdemMicrobiologySignatures className="mt-8 print:break-inside-avoid" />
     </PrintLayout>
   );
 }
