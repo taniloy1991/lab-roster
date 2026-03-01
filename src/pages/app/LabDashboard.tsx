@@ -44,7 +44,7 @@ function BdClock() {
     }).format(now);
   }, [now]);
 
-  return <div className="mt-1 text-lg font-semibold tabular-nums text-foreground">{label}</div>;
+  return <div className="mt-0.5 text-base font-semibold tabular-nums text-foreground">{label}</div>;
 }
 
 
@@ -323,20 +323,23 @@ export default function LabDashboard() {
           <div className="text-xs text-muted-foreground">Prepared by Md. Asif Hossain, Research Assistant.</div>
         </div>
 
-        <div className="flex flex-col gap-3 sm:items-end">
+        <div className="flex flex-col gap-3 sm:items-start">
           <div className="text-xs text-muted-foreground">
             Last update: {lastUpdatedAt ? format(parseISO(lastUpdatedAt), "dd MMM yyyy, p") : "—"}
           </div>
 
-          <div className="grid w-full gap-3 sm:w-auto sm:grid-cols-2">
-            <div className="rounded-md border border-border bg-background p-3">
-              <div className="text-xs font-medium text-muted-foreground">BD Time</div>
+          <div className="grid w-full max-w-full gap-3 sm:grid-cols-2">
+            <div className="w-fit max-w-full rounded-md border border-border bg-background p-2">
+              <div className="text-[11px] font-medium text-muted-foreground">BD Time</div>
               <BdClock />
             </div>
-            <div className="rounded-md border border-border bg-background p-3">
-              <div className="text-xs font-medium text-muted-foreground">Calendar</div>
-              <div className="mt-2">
-                <Calendar mode="single" selected={new Date()} />
+
+            <div className="w-fit max-w-full rounded-md border border-border bg-background p-2">
+              <div className="text-[11px] font-medium text-muted-foreground">Calendar</div>
+              <div className="mt-1 max-w-full overflow-x-auto">
+                <div className="w-fit origin-top-left scale-[0.92]">
+                  <Calendar mode="single" selected={new Date()} />
+                </div>
               </div>
             </div>
           </div>
