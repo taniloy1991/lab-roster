@@ -3,11 +3,11 @@ import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/providers/AuthProvider";
+import { PrintLayout } from "@/components/print/PrintLayout";
 import { InstitutionPdfHeader } from "@/components/print/InstitutionPdfHeader";
 import { BirdemMicrobiologySignatures } from "@/components/print/BirdemMicrobiologySignatures";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-
 type LeaveHistoryRow = { date: string | null; type: string | null };
 
 type ClBalanceRow = { remaining_days: number | null };
@@ -62,7 +62,12 @@ export default function StaffLeaveStatementPrint() {
   if (!staffId) return <Navigate to="/app/staff" replace />;
 
   return (
-    <>
+    <PrintLayout
+      pageClassName="staff-statement-page"
+      className="bg-card"
+      footer={<BirdemMicrobiologySignatures />}
+      footerClassName="print:break-inside-avoid"
+    >
       <div className="pdf-header hidden print:block mb-6">
         <InstitutionPdfHeader />
         <div className="mx-auto max-w-5xl px-4 mt-2 text-center">
@@ -122,9 +127,7 @@ export default function StaffLeaveStatementPrint() {
             </table>
           </CardContent>
         </Card>
-
-        <BirdemMicrobiologySignatures className="mt-10" />
       </div>
-    </>
+    </PrintLayout>
   );
 }

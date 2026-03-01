@@ -58,7 +58,7 @@ export default function PrintOffOverview() {
   }, [staffId]);
 
   return (
-    <PrintLayout className="print:pt-6">
+    <PrintLayout className="print:pt-6" footer={<BirdemMicrobiologySignatures />} footerClassName="print:break-inside-avoid">
       <header className="text-center">
         <InstitutionPdfHeader />
         <div className="pt-6 text-xl font-semibold">{title}</div>
@@ -142,8 +142,6 @@ export default function PrintOffOverview() {
           </table>
         </div>
       </section>
-
-      <BirdemMicrobiologySignatures className="mt-12" />
     </PrintLayout>
   );
 }
