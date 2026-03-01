@@ -7,27 +7,19 @@ import { useAuth } from "@/providers/AuthProvider";
 import { Button } from "@/components/ui/button";
 import { PrintLayout } from "@/components/print/PrintLayout";
 
-type VisualLeaveType = "others" | "earned_leave" | "casual_leave" | "week_off" | "govt_holiday" | "none";
-
 type PdfRow = {
   duty_date: string;
-  morning: string;
-  evening: string;
-  night: string;
-  leave: string;
-};
-
-const leaveLabel: Record<VisualLeaveType, string> = {
-  others: "Others",
-  earned_leave: "Earned Leave",
-  casual_leave: "Casual Leave",
-  week_off: "Week Off",
-  govt_holiday: "Govt. Holiday",
-  none: "None",
+  morning_staff: string;
+  morning_note: string;
+  evening_staff: string;
+  evening_note: string;
+  night_staff: string;
+  night_note: string;
+  leave_status: string;
 };
 
 export default function RosterPrint() {
-  const { loading: authLoading, session } = useAuth();
+  const { loading: authLoading, session, activeInstitutionId } = useAuth();
 
   const [params] = useSearchParams();
   const nav = useNavigate();
@@ -55,7 +47,6 @@ export default function RosterPrint() {
     const start = format(range.start, "yyyy-MM-dd");
     const end = format(range.end, "yyyy-MM-dd");
 
-    // If there are selected dates in selected_roster_dates for this month → use selected mode.
     const selRes = await supabase
       .from("selected_roster_dates")
       .select("duty_date")
@@ -74,51 +65,62 @@ export default function RosterPrint() {
 
     const rosterRes = await supabase
       .from("roster_visual_entries" as any)
-      .select("id,duty_date,shift,staff_id,responsibility_note,leave_type, staff:staff_id(name)")
+      .select("duty_date,shift,staff_id,responsibility_note, staff:staff_id(name)")
       .gte("duty_date", start)
       .lte("duty_date", end)
+      .not("shift", "is", null)
       .order("duty_date", { ascending: true })
       .order("created_at", { ascending: true });
 
-    const byDate = new Map<string, { morning: string[]; evening: string[]; night: string[] }>();
-    const leaveByDate = new Map<string, string>();
+    const daysRes = await supabase
+      .from("roster_days")
+      .select("duty_date,leave_status")
+      .gte("duty_date", start)
+      .lte("duty_date", end)
+      .eq("institution_id", activeInstitutionId ?? "00000000-0000-0000-0000-000000000000")
+      .order("duty_date", { ascending: true });
 
+    const byDateShift = new Map<string, { staff: string; note: string }>();
     for (const r of (rosterRes.data ?? []) as any[]) {
       const d = String(r.duty_date);
       if (hasSelection && !selectedSet.has(d)) continue;
 
-      if (r.shift == null) {
-        const t = (r.leave_type ?? "none") as VisualLeaveType;
-        const tLabel = leaveLabel[t] ?? "None";
-        const name = r.staff?.name ?? "—";
-        // New behavior: leave rows can have staff_id; show "Name — Type"
-        leaveByDate.set(d, r.staff_id ? `${name} — ${tLabel}` : tLabel);
-        continue;
-      }
-
       const shift = String(r.shift) as "morning" | "evening" | "night";
       const name = r.staff?.name ?? "—";
       const note = String(r.responsibility_note ?? "").trim();
-      const line = note ? `${name} — ${note}` : name;
-
-      const cur = byDate.get(d) ?? { morning: [], evening: [], night: [] };
-      cur[shift].push(line);
-      byDate.set(d, cur);
+      byDateShift.set(`${d}:${shift}`, { staff: name, note: note || "—" });
     }
 
-    const dates = Array.from(new Set([...byDate.keys(), ...leaveByDate.keys()])).sort();
+    const leaveStatusByDate = new Map<string, string>();
+    for (const r of (daysRes.data ?? []) as any[]) {
+      const d = String(r.duty_date);
+      if (hasSelection && !selectedSet.has(d)) continue;
+      const v = String(r.leave_status ?? "").trim();
+      if (v) leaveStatusByDate.set(d, v);
+    }
+
+    const dates = Array.from(
+      new Set<string>([
+        ...leaveStatusByDate.keys(),
+        ...Array.from(byDateShift.keys()).map((k) => k.split(":")[0]),
+      ]),
+    ).sort();
 
     setRows(
       dates.map((d) => {
-        const v = byDate.get(d) ?? { morning: [], evening: [], night: [] };
-        const leave = leaveByDate.get(d) ?? "—";
+        const m = byDateShift.get(`${d}:morning`);
+        const e = byDateShift.get(`${d}:evening`);
+        const n = byDateShift.get(`${d}:night`);
 
         return {
           duty_date: d,
-          morning: v.morning.join("\n") || "—",
-          evening: v.evening.join("\n") || "—",
-          night: v.night.join("\n") || "—",
-          leave: leave || "—",
+          morning_staff: m?.staff ?? "—",
+          morning_note: m?.note ?? "—",
+          evening_staff: e?.staff ?? "—",
+          evening_note: e?.note ?? "—",
+          night_staff: n?.staff ?? "—",
+          night_note: n?.note ?? "—",
+          leave_status: leaveStatusByDate.get(d) ?? "—",
         };
       }),
     );
@@ -129,7 +131,7 @@ export default function RosterPrint() {
   useEffect(() => {
     void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [month]);
+  }, [month, activeInstitutionId]);
 
   if (authLoading) return null;
   if (!session) return <Navigate to="/login" replace />;
@@ -162,24 +164,30 @@ export default function RosterPrint() {
 
       <section className="mt-6">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[980px] text-sm">
+          <table className="w-full min-w-[1320px] text-sm">
             <thead className="text-left text-xs text-muted-foreground">
               <tr className="border-b">
                 <th className="py-3 pr-4">Date</th>
-                <th className="py-3 pr-4">Morning (Staff — Responsibility)</th>
-                <th className="py-3 pr-4">Evening (Staff — Responsibility)</th>
-                <th className="py-3 pr-4">Night (Staff — Responsibility)</th>
-                <th className="py-3 pr-4">Leave (Staff — Type)</th>
+                <th className="py-3 pr-4">Morning Staff</th>
+                <th className="py-3 pr-4">Morning Duty Note</th>
+                <th className="py-3 pr-4">Evening Staff</th>
+                <th className="py-3 pr-4">Evening Duty Note</th>
+                <th className="py-3 pr-4">Night Staff</th>
+                <th className="py-3 pr-4">Night Duty Note</th>
+                <th className="py-3 pr-4">Leave / Status</th>
               </tr>
             </thead>
             <tbody>
               {rows.map((r) => (
                 <tr key={String(r.duty_date)} className="border-b last:border-b-0">
                   <td className="py-3 pr-4 tabular-nums font-medium">{r.duty_date}</td>
-                  <td className="py-3 pr-4 align-top whitespace-pre-wrap">{r.morning}</td>
-                  <td className="py-3 pr-4 align-top whitespace-pre-wrap">{r.evening}</td>
-                  <td className="py-3 pr-4 align-top whitespace-pre-wrap">{r.night}</td>
-                  <td className="py-3 pr-4 align-top whitespace-pre-wrap">{r.leave}</td>
+                  <td className="py-3 pr-4 align-top">{r.morning_staff}</td>
+                  <td className="py-3 pr-4 align-top whitespace-pre-wrap">{r.morning_note}</td>
+                  <td className="py-3 pr-4 align-top">{r.evening_staff}</td>
+                  <td className="py-3 pr-4 align-top whitespace-pre-wrap">{r.evening_note}</td>
+                  <td className="py-3 pr-4 align-top">{r.night_staff}</td>
+                  <td className="py-3 pr-4 align-top whitespace-pre-wrap">{r.night_note}</td>
+                  <td className="py-3 pr-4 align-top whitespace-pre-wrap">{r.leave_status}</td>
                 </tr>
               ))}
             </tbody>
