@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/providers/AuthProvider";
 import { Button } from "@/components/ui/button";
 import { PrintLayout } from "@/components/print/PrintLayout";
+import { InstitutionPdfHeader } from "@/components/print/InstitutionPdfHeader";
 
 type PdfRow = {
   duty_date: string;
@@ -171,8 +172,7 @@ export default function RosterPrint() {
   return (
     <PrintLayout pageClassName="roster-print-page" className="bg-card">
       <header className="text-center">
-        <div className="text-base font-semibold leading-tight">Department of Microbiology</div>
-        <div className="text-base font-semibold leading-tight">BIRDEM GENERAL HOSPITAL</div>
+        <InstitutionPdfHeader />
 
         <h1 className="mt-6 text-xl font-semibold tracking-tight">{format(parseISO(`${month}-01`), "MMMM yyyy")}</h1>
         <p className="mt-2 text-sm text-muted-foreground">
