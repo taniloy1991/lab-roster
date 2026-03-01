@@ -32,7 +32,7 @@ export default function RosterCalendar() {
     return { start, end };
   }, [month]);
 
-  const { loading, monthDays, reload, byDateShift, upsertStaffEntry } = useRosterVisualMonth({
+  const { loading, monthDays, reload, byDateShift, addShiftEntry, updateShiftEntry, removeEntry } = useRosterVisualMonth({
     activeInstitutionId,
     month,
   });
@@ -236,7 +236,9 @@ export default function RosterCalendar() {
             byDateShift={byDateShift}
             leaveStatusByDate={leaveStatusByDate}
             onSetLeaveStatus={(p) => void setLeaveStatus(p)}
-            onUpsertShift={(p) => void upsertStaffEntry(p)}
+            onAddShiftEntry={(p) => void addShiftEntry(p)}
+            onUpdateShiftEntry={(p) => void updateShiftEntry(p)}
+            onRemoveShiftEntry={(p) => void removeEntry(p)}
           />
         </CardContent>
       </Card>
