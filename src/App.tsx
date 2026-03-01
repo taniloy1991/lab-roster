@@ -20,13 +20,11 @@ import DashboardLanding from "./pages/app/DashboardLanding";
 import SetupSuperAdmin from "./pages/app/SetupSuperAdmin";
 import InstitutionDashboard from "./pages/app/InstitutionDashboard";
 import LabDashboard from "./pages/app/LabDashboard";
-import StaffDashboard from "./pages/app/StaffDashboard";
 import StaffManagement from "./pages/app/StaffManagement";
 import StaffLeaveStatementPrint from "./pages/app/StaffLeaveStatementPrint";
 import HolidaysCalendar from "./pages/app/HolidaysCalendar";
 import RosterCalendar from "./pages/app/RosterCalendar";
 import RosterPrint from "./pages/app/RosterPrint";
-import LeaveManagement from "./pages/app/LeaveManagement";
 import ReportsMonthly from "./pages/app/ReportsMonthly";
 import PrintMonthlyReport from "./pages/print/PrintMonthlyReport";
 import PrintClOverview from "./pages/print/PrintClOverview";
@@ -117,14 +115,6 @@ const App = () => (
                       </RoleGate>
                     }
                   />
-                  <Route
-                    path="me"
-                    element={
-                      <RoleGate requireAnyInstitutionRole={["staff"]}>
-                        <StaffDashboard />
-                      </RoleGate>
-                    }
-                  />
 
                   <Route
                     path="staff"
@@ -143,14 +133,6 @@ const App = () => (
                     }
                   />
                   <Route path="holidays" element={<HolidaysCalendar />} />
-                  <Route
-                    path="leaves"
-                    element={
-                      <RoleGate requireAnyInstitutionRole={["lab_incharge"]}>
-                        <LeaveManagement />
-                      </RoleGate>
-                    }
-                  />
                   <Route
                     path="roster"
                     element={
