@@ -14,6 +14,7 @@ import NotFound from "./pages/NotFound";
 
 import Login from "./pages/auth/Login";
 import Signup from "./pages/auth/Signup";
+import Install from "./pages/Install";
 
 import AppHome from "./pages/app/AppHome";
 import DashboardLanding from "./pages/app/DashboardLanding";
@@ -39,10 +40,11 @@ const App = () => (
       <Sonner />
       <AuthProvider>
         <BrowserRouter>
-            <div className="min-h-screen flex flex-col">
+          <div className="min-h-screen flex flex-col">
             <div className="flex-1">
               <Routes>
                 <Route path="/" element={<Index />} />
+                <Route path="/install" element={<Install />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/signup" element={<Signup />} />
 
