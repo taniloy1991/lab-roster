@@ -53,10 +53,24 @@ export default function ReportsMonthly() {
     const inst = await supabase.from("institutions").select("name").eq("id", activeInstitutionId).maybeSingle();
     setInstitutionName(inst.data?.name ?? "");
 
+    // Institution-scoped: start from staff list, then pull balances from views by staff_id.
+    const staffRes = await supabase
+      .from("staff")
+      .select("id,name")
+      .eq("institution_id", activeInstitutionId)
+      .eq("is_active", true)
+      .order("name");
+
+    const staffIds = (staffRes.data ?? []).map((s: any) => String(s.id));
+
     // Use existing views only (requested): cl_balance_view + off_balance_view
     const [clRes, offRes] = await Promise.all([
-      supabase.from("cl_balance_view").select("staff_id,name,remaining_days"),
-      supabase.from("off_balance_view").select("staff_id,name,off_balance"),
+      staffIds.length
+        ? supabase.from("cl_balance_view").select("staff_id,name,remaining_days").in("staff_id", staffIds)
+        : Promise.resolve({ data: [], error: null } as any),
+      staffIds.length
+        ? supabase.from("off_balance_view").select("staff_id,name,off_balance").in("staff_id", staffIds)
+        : Promise.resolve({ data: [], error: null } as any),
     ]);
 
     const cl = (clRes.data ?? []) as ClBalanceRow[];
@@ -64,27 +78,27 @@ export default function ReportsMonthly() {
 
     const map = new Map<string, Row>();
 
-    for (const r of cl) {
-      if (!r.staff_id) continue;
-      map.set(r.staff_id, {
-        staffId: r.staff_id,
-        name: r.name ?? "—",
-        clRemaining: Number(r.remaining_days ?? 0),
+    for (const s of staffRes.data ?? []) {
+      map.set(String((s as any).id), {
+        staffId: String((s as any).id),
+        name: (s as any).name ?? "—",
+        clRemaining: 0,
         offBalance: 0,
       });
     }
 
+    for (const r of cl) {
+      if (!r.staff_id) continue;
+      const cur = map.get(r.staff_id);
+      if (!cur) continue;
+      cur.clRemaining = Number(r.remaining_days ?? 0);
+    }
+
     for (const r of off) {
       if (!r.staff_id) continue;
-      const cur = map.get(r.staff_id) ?? {
-        staffId: r.staff_id,
-        name: r.name ?? "—",
-        clRemaining: 0,
-        offBalance: 0,
-      };
+      const cur = map.get(r.staff_id);
+      if (!cur) continue;
       cur.offBalance = Number(r.off_balance ?? 0);
-      if (r.name && cur.name === "—") cur.name = r.name;
-      map.set(r.staff_id, cur);
     }
 
     setRows(Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name)));

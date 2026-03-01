@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 
 import { supabase } from "@/integrations/supabase/client";
 import { PrintLayout } from "@/components/print/PrintLayout";
+import { BirdemMicrobiologySignatures } from "@/components/print/BirdemMicrobiologySignatures";
 import { cn } from "@/lib/utils";
 
 type EarnRow = { start_date: string; end_date: string; days_earned: number };
@@ -142,9 +143,7 @@ export default function PrintOffOverview() {
         </div>
       </section>
 
-      <footer className="mt-12 flex items-center justify-between">
-        <div className="text-sm">Prepared By: Asif Hossain</div>
-      </footer>
+      <BirdemMicrobiologySignatures className="mt-12" />
     </PrintLayout>
   );
 }

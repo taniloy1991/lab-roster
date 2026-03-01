@@ -4,6 +4,7 @@ import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/providers/AuthProvider";
 import { InstitutionPdfHeader } from "@/components/print/InstitutionPdfHeader";
+import { BirdemMicrobiologySignatures } from "@/components/print/BirdemMicrobiologySignatures";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -122,11 +123,7 @@ export default function StaffLeaveStatementPrint() {
           </CardContent>
         </Card>
 
-        <footer className="mt-10">
-          <div className="text-sm text-muted-foreground">
-            Prepared By: <span className="text-foreground">Asif Hossain</span>
-          </div>
-        </footer>
+        <BirdemMicrobiologySignatures className="mt-10" />
       </div>
     </>
   );
