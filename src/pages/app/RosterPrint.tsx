@@ -195,7 +195,8 @@ export default function RosterPrint() {
       </section>
 
       <section className="mt-6">
-        <div className="overflow-x-auto">
+        {/* Screen/table view (kept wide + scrollable) */}
+        <div className="print:hidden overflow-x-auto">
           <table className="w-full min-w-[1320px] text-sm">
             <thead className="text-left text-xs text-muted-foreground">
               <tr className="border-b">
@@ -224,6 +225,43 @@ export default function RosterPrint() {
               ))}
             </tbody>
           </table>
+        </div>
+
+        {/* Print/PDF view (portrait friendly, no horizontal scroll) */}
+        <div className="hidden print:block">
+          <div className="space-y-4">
+            {rows.map((r) => (
+              <section key={String(r.duty_date)} className="break-inside-avoid rounded-md border border-border p-3">
+                <header className="flex items-start justify-between gap-3">
+                  <div className="font-semibold tabular-nums">{r.duty_date}</div>
+                  <div className="text-right text-xs text-muted-foreground whitespace-pre-wrap">{r.leave_status}</div>
+                </header>
+
+                <div className="mt-3 grid grid-cols-1 gap-3">
+                  <div className="grid grid-cols-[90px_1fr] gap-x-3 gap-y-1">
+                    <div className="text-xs font-semibold text-muted-foreground">Morning</div>
+                    <div className="text-sm">{r.morning_staff}</div>
+                    <div className="text-xs text-muted-foreground">Note</div>
+                    <div className="text-xs whitespace-pre-wrap">{r.morning_note}</div>
+                  </div>
+
+                  <div className="grid grid-cols-[90px_1fr] gap-x-3 gap-y-1">
+                    <div className="text-xs font-semibold text-muted-foreground">Evening</div>
+                    <div className="text-sm">{r.evening_staff}</div>
+                    <div className="text-xs text-muted-foreground">Note</div>
+                    <div className="text-xs whitespace-pre-wrap">{r.evening_note}</div>
+                  </div>
+
+                  <div className="grid grid-cols-[90px_1fr] gap-x-3 gap-y-1">
+                    <div className="text-xs font-semibold text-muted-foreground">Night</div>
+                    <div className="text-sm">{r.night_staff}</div>
+                    <div className="text-xs text-muted-foreground">Note</div>
+                    <div className="text-xs whitespace-pre-wrap">{r.night_note}</div>
+                  </div>
+                </div>
+              </section>
+            ))}
+          </div>
         </div>
       </section>
 

@@ -141,16 +141,28 @@
       color: hsl(var(--muted-foreground));
     }
 
-    /* Standalone print pages: hide any app chrome just in case */
+    /* Standalone print pages: hide app chrome only (NOT the page header/content) */
     .monthly-print-page .sidebar,
     .monthly-print-page nav,
-    .monthly-print-page header,
     .monthly-print-page .app-shell,
     .roster-print-page .sidebar,
     .roster-print-page nav,
-    .roster-print-page header,
     .roster-print-page .app-shell {
       display: none !important;
+    }
+
+    /* Print tables should never force horizontal scrolling */
+    .print-table {
+      min-width: 0 !important;
+      width: 100% !important;
+      table-layout: fixed;
+    }
+
+    .print-table th,
+    .print-table td {
+      word-break: break-word;
+      overflow-wrap: anywhere;
+      vertical-align: top;
     }
   }
 }
