@@ -125,18 +125,19 @@ export default function RosterPrint() {
     ).sort();
 
     const fmtStaff = (arr?: { staff: string; note: string }[]) => {
-      if (!arr?.length) return "—";
+      if (!arr?.length) return "";
       return arr.map((x) => x.staff).join(", ");
     };
 
     const fmtNotes = (arr?: { staff: string; note: string }[]) => {
-      if (!arr?.length) return "—";
-      return arr
+      if (!arr?.length) return "";
+      const notesOnly = arr
         .map((x) => {
           const t = x.note.trim();
-          return t ? `${x.staff}: ${t}` : x.staff;
+          return t ? `${x.staff}: ${t}` : "";
         })
-        .join("\n");
+        .filter(Boolean);
+      return notesOnly.join("\n");
     };
 
     setRows(
@@ -153,13 +154,16 @@ export default function RosterPrint() {
           evening_note: fmtNotes(e),
           night_staff: fmtStaff(n),
           night_note: fmtNotes(n),
-          leave_status: leaveStatusByDate.get(d) ?? "—",
+          leave_status: leaveStatusByDate.get(d) ?? "",
         };
       }),
     );
 
     setLoading(false);
   };
+
+  const isBlank = (v: string | null | undefined) => !String(v ?? "").trim();
+  const showNight = useMemo(() => rows.some((r) => !isBlank(r.night_staff) || !isBlank(r.night_note)), [rows]);
 
   useEffect(() => {
     void load();
@@ -214,13 +218,13 @@ export default function RosterPrint() {
               {rows.map((r) => (
                 <tr key={String(r.duty_date)} className="border-b last:border-b-0">
                   <td className="py-3 pr-4 tabular-nums font-medium">{r.duty_date}</td>
-                  <td className="py-3 pr-4 align-top">{r.morning_staff}</td>
-                  <td className="py-3 pr-4 align-top whitespace-pre-wrap">{r.morning_note}</td>
-                  <td className="py-3 pr-4 align-top">{r.evening_staff}</td>
-                  <td className="py-3 pr-4 align-top whitespace-pre-wrap">{r.evening_note}</td>
-                  <td className="py-3 pr-4 align-top">{r.night_staff}</td>
-                  <td className="py-3 pr-4 align-top whitespace-pre-wrap">{r.night_note}</td>
-                  <td className="py-3 pr-4 align-top whitespace-pre-wrap">{r.leave_status}</td>
+                  <td className="py-3 pr-4 align-top">{r.morning_staff || "—"}</td>
+                  <td className="py-3 pr-4 align-top whitespace-pre-wrap">{r.morning_note || "—"}</td>
+                  <td className="py-3 pr-4 align-top">{r.evening_staff || "—"}</td>
+                  <td className="py-3 pr-4 align-top whitespace-pre-wrap">{r.evening_note || "—"}</td>
+                  <td className="py-3 pr-4 align-top">{r.night_staff || "—"}</td>
+                  <td className="py-3 pr-4 align-top whitespace-pre-wrap">{r.night_note || "—"}</td>
+                  <td className="py-3 pr-4 align-top whitespace-pre-wrap">{r.leave_status || "—"}</td>
                 </tr>
               ))}
             </tbody>
@@ -230,45 +234,76 @@ export default function RosterPrint() {
         {/* Print/PDF view (portrait friendly, no horizontal scroll) */}
         <div className="hidden print:block">
           <div className="space-y-4">
-            {rows.map((r) => (
-              <section key={String(r.duty_date)} className="break-inside-avoid rounded-md border border-border p-3">
-                <header className="flex items-start justify-between gap-3">
-                  <div className="font-semibold tabular-nums">{r.duty_date}</div>
-                  <div className="text-right text-xs text-muted-foreground whitespace-pre-wrap">{r.leave_status}</div>
-                </header>
+            {rows.map((r) => {
+              const hasMorning = !isBlank(r.morning_staff);
+              const hasEvening = !isBlank(r.evening_staff);
+              const hasNight = showNight && !isBlank(r.night_staff);
 
-                <div className="mt-3 grid grid-cols-1 gap-3">
-                  <div className="grid grid-cols-[90px_1fr] gap-x-3 gap-y-1">
-                    <div className="text-xs font-semibold text-muted-foreground">Morning</div>
-                    <div className="text-sm">{r.morning_staff}</div>
-                    <div className="text-xs text-muted-foreground">Note</div>
-                    <div className="text-xs whitespace-pre-wrap">{r.morning_note}</div>
-                  </div>
+              return (
+                <section key={String(r.duty_date)} className="break-inside-avoid rounded-md border border-border p-3">
+                  <header className="flex items-start justify-between gap-3">
+                    <div className="font-semibold tabular-nums">{r.duty_date}</div>
+                    {r.leave_status ? (
+                      <div className="text-right text-xs text-muted-foreground whitespace-pre-wrap">{r.leave_status}</div>
+                    ) : null}
+                  </header>
 
-                  <div className="grid grid-cols-[90px_1fr] gap-x-3 gap-y-1">
-                    <div className="text-xs font-semibold text-muted-foreground">Evening</div>
-                    <div className="text-sm">{r.evening_staff}</div>
-                    <div className="text-xs text-muted-foreground">Note</div>
-                    <div className="text-xs whitespace-pre-wrap">{r.evening_note}</div>
-                  </div>
+                  <div className="mt-3 grid grid-cols-1 gap-3">
+                    {hasMorning ? (
+                      <div className="grid grid-cols-[90px_1fr] gap-x-3 gap-y-1">
+                        <div className="text-xs font-semibold text-muted-foreground">Morning</div>
+                        <div className="text-sm">{r.morning_staff}</div>
+                        {r.morning_note ? (
+                          <>
+                            <div className="text-xs text-muted-foreground">Note</div>
+                            <div className="text-xs whitespace-pre-wrap">{r.morning_note}</div>
+                          </>
+                        ) : null}
+                      </div>
+                    ) : null}
 
-                  <div className="grid grid-cols-[90px_1fr] gap-x-3 gap-y-1">
-                    <div className="text-xs font-semibold text-muted-foreground">Night</div>
-                    <div className="text-sm">{r.night_staff}</div>
-                    <div className="text-xs text-muted-foreground">Note</div>
-                    <div className="text-xs whitespace-pre-wrap">{r.night_note}</div>
+                    {hasEvening ? (
+                      <div className="grid grid-cols-[90px_1fr] gap-x-3 gap-y-1">
+                        <div className="text-xs font-semibold text-muted-foreground">Evening</div>
+                        <div className="text-sm">{r.evening_staff}</div>
+                        {r.evening_note ? (
+                          <>
+                            <div className="text-xs text-muted-foreground">Note</div>
+                            <div className="text-xs whitespace-pre-wrap">{r.evening_note}</div>
+                          </>
+                        ) : null}
+                      </div>
+                    ) : null}
+
+                    {hasNight ? (
+                      <div className="grid grid-cols-[90px_1fr] gap-x-3 gap-y-1">
+                        <div className="text-xs font-semibold text-muted-foreground">Night</div>
+                        <div className="text-sm">{r.night_staff}</div>
+                        {r.night_note ? (
+                          <>
+                            <div className="text-xs text-muted-foreground">Note</div>
+                            <div className="text-xs whitespace-pre-wrap">{r.night_note}</div>
+                          </>
+                        ) : null}
+                      </div>
+                    ) : null}
+
+                    {!hasMorning && !hasEvening && !hasNight ? (
+                      <div className="text-xs text-muted-foreground">No roster entries.</div>
+                    ) : null}
                   </div>
-                </div>
-              </section>
-            ))}
+                </section>
+              );
+            })}
           </div>
         </div>
       </section>
 
       <section className="mt-10 grid grid-cols-1 gap-8 text-sm sm:grid-cols-2">
         <div>
-          <div className="text-muted-foreground">Prepared By:</div>
-          <div className="mt-3 border-b border-border" />
+          <div className="text-muted-foreground">
+            Prepared By: <span className="text-foreground">Asif Hossain</span>
+          </div>
         </div>
         <div>
           <div className="text-muted-foreground">Approved By:</div>

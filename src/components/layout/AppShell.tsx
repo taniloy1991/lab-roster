@@ -108,7 +108,7 @@ export function AppShell() {
               <div className="border-b p-5">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="text-xs font-medium text-muted-foreground">Laboratory Roaster Management</p>
+                    <p className="text-xs font-medium text-muted-foreground">Laboratory Roster Management</p>
                     {institutionName ? (
                       <p className="mt-1 truncate text-xs font-medium text-foreground/80">{institutionName}</p>
                     ) : null}
@@ -171,6 +171,9 @@ export function AppShell() {
               </nav>
 
               <div className="border-t p-3">
+                <div className="mb-2 text-[11px] text-muted-foreground">
+                  Designed and Developed By: Tanvir Ahmed Niloy
+                </div>
                 <Button
                   variant="outline"
                   className="w-full justify-start"

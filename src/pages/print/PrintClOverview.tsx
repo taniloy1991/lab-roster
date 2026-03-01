@@ -99,7 +99,7 @@ export default function PrintClOverview() {
       </section>
 
       <footer className="mt-12 flex items-center justify-between">
-        <div className="text-sm">Prepared By: ______________________</div>
+        <div className="text-sm">Prepared By: Asif Hossain</div>
       </footer>
     </PrintLayout>
   );

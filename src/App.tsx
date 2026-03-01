@@ -178,12 +178,12 @@ const App = () => (
 
             {/* Screen footer (every page) */}
             <footer className="app-screen-footer px-4 py-4 text-center text-xs text-muted-foreground">
-              Designed and Developed by Tanvir Ahmed Niloy
+              Designed and Developed By: Tanvir Ahmed Niloy
             </footer>
 
             {/* Print/PDF footer (fixed to page bottom) */}
             <div className="app-print-footer text-center text-xs text-muted-foreground">
-              Designed and Developed by Tanvir Ahmed Niloy
+              Designed and Developed By: Tanvir Ahmed Niloy
             </div>
           </div>
         </BrowserRouter>

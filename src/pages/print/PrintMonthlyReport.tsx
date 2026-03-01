@@ -154,8 +154,9 @@ export default function PrintMonthlyReport() {
 
       <section className="mt-10 grid grid-cols-1 gap-8 text-sm sm:grid-cols-2">
         <div>
-          <div className="text-muted-foreground">Prepared By:</div>
-          <div className="mt-3 border-b border-border" />
+          <div className="text-muted-foreground">
+            Prepared By: <span className="text-foreground">Asif Hossain</span>
+          </div>
         </div>
         <div>
           <div className="text-muted-foreground">Approved By:</div>
