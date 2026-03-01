@@ -47,7 +47,7 @@ export function useRosterVisualMonth(params: { activeInstitutionId: string | nul
       .order("duty_date", { ascending: true })
       .order("created_at", { ascending: true });
 
-    // Only keep shift rows (planning assignments). Leave rows (shift NULL) are no longer used.
+    // Keep only shift rows (planning assignments). Leave rows (shift NULL) are not used.
     const clean = ((res.data ?? []) as any[])
       .filter((r) => r.shift != null && r.staff_id != null)
       .map((r) => ({
@@ -65,17 +65,9 @@ export function useRosterVisualMonth(params: { activeInstitutionId: string | nul
     setLoading(false);
   }, [activeInstitutionId, range.end, range.start]);
 
-  const upsertStaffEntry = useCallback(
+  const addShiftEntry = useCallback(
     async (p: { dutyDate: string; shift: VisualShift; staffId: string; dutyNote: string }) => {
       if (!activeInstitutionId) return;
-
-      // Enforce single staff per date+shift (planning only).
-      await supabase
-        .from("roster_visual_entries" as any)
-        .delete()
-        .eq("institution_id", activeInstitutionId)
-        .eq("duty_date", p.dutyDate)
-        .eq("shift", p.shift);
 
       await supabase.from("roster_visual_entries" as any).insert({
         institution_id: activeInstitutionId,
@@ -90,25 +82,40 @@ export function useRosterVisualMonth(params: { activeInstitutionId: string | nul
     [activeInstitutionId, reload],
   );
 
-  const removeEntry = useCallback(
-    async (p: { dutyDate: string; shift: VisualShift }) => {
+  const updateShiftEntry = useCallback(
+    async (p: { id: string; staffId: string; dutyNote: string }) => {
       if (!activeInstitutionId) return;
+
       await supabase
         .from("roster_visual_entries" as any)
-        .delete()
-        .eq("institution_id", activeInstitutionId)
-        .eq("duty_date", p.dutyDate)
-        .eq("shift", p.shift);
+        .update({
+          staff_id: p.staffId,
+          responsibility_note: p.dutyNote.trim() ? p.dutyNote.trim() : null,
+        })
+        .eq("id", p.id)
+        .eq("institution_id", activeInstitutionId);
+
+      await reload();
+    },
+    [activeInstitutionId, reload],
+  );
+
+  const removeEntry = useCallback(
+    async (p: { id: string }) => {
+      if (!activeInstitutionId) return;
+      await supabase.from("roster_visual_entries" as any).delete().eq("id", p.id).eq("institution_id", activeInstitutionId);
       await reload();
     },
     [activeInstitutionId, reload],
   );
 
   const byDateShift = useMemo(() => {
-    const map = new Map<string, VisualEntry>();
+    const map = new Map<string, VisualEntry[]>();
     for (const e of entries) {
       const k = `${e.duty_date}:${e.shift}`;
-      map.set(k, e);
+      const arr = map.get(k) ?? [];
+      arr.push(e);
+      map.set(k, arr);
     }
     return map;
   }, [entries]);
@@ -119,9 +126,11 @@ export function useRosterVisualMonth(params: { activeInstitutionId: string | nul
     range,
     monthDays,
     reload,
-    upsertStaffEntry,
+    addShiftEntry,
+    updateShiftEntry,
     removeEntry,
     byDateShift,
   };
 }
+
 

@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from "react";
+import { Plus, Trash2 } from "lucide-react";
 
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -9,11 +10,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 import type { Shift, StaffRow } from "./types";
 import type { VisualEntry } from "./useRosterVisualMonth";
 
 type ShiftKey = `${string}:${Shift}`;
+
+type EntryKey = string; // VisualEntry.id or "new:${date}:${shift}" for draft rows
 
 export function RosterMonthTable(props: {
   monthDays: string[];
@@ -24,15 +28,17 @@ export function RosterMonthTable(props: {
   onToggleDate: (dutyDate: string) => void;
   onToggleAll: () => void;
 
-  // Single entry per date+shift
-  byDateShift: Map<string, VisualEntry>;
+  // Multiple entries per date+shift
+  byDateShift: Map<string, VisualEntry[]>;
 
   // Manual per-date leave/status text (stored in roster_days.leave_status)
   leaveStatusByDate: Map<string, string>;
   onSetLeaveStatus: (params: { dutyDate: string; value: string }) => void;
 
   // Planning assignment write
-  onUpsertShift: (params: { dutyDate: string; shift: Shift; staffId: string; dutyNote: string }) => void;
+  onAddShiftEntry: (params: { dutyDate: string; shift: Shift; staffId: string; dutyNote: string }) => void;
+  onUpdateShiftEntry: (params: { id: string; staffId: string; dutyNote: string }) => void;
+  onRemoveShiftEntry: (params: { id: string }) => void;
 }) {
   const {
     monthDays,
@@ -44,7 +50,9 @@ export function RosterMonthTable(props: {
     byDateShift,
     leaveStatusByDate,
     onSetLeaveStatus,
-    onUpsertShift,
+    onAddShiftEntry,
+    onUpdateShiftEntry,
+    onRemoveShiftEntry,
   } = props;
 
   const selection = useMemo(() => {
@@ -57,11 +65,11 @@ export function RosterMonthTable(props: {
     selection.selected === 0 ? false : selection.selected === selection.total ? true : "indeterminate";
 
   // Local drafts to keep typing snappy; commit on blur
-  const [noteDraft, setNoteDraft] = useState<Map<ShiftKey, string>>(() => new Map());
+  const [noteDraft, setNoteDraft] = useState<Map<EntryKey, string>>(() => new Map());
   const [leaveDraft, setLeaveDraft] = useState<Map<string, string>>(() => new Map());
 
-  const getNoteDraft = (k: ShiftKey, fallback: string) => noteDraft.get(k) ?? fallback;
-  const setNote = (k: ShiftKey, v: string) =>
+  const getNoteDraft = (k: EntryKey, fallback: string) => noteDraft.get(k) ?? fallback;
+  const setNote = (k: EntryKey, v: string) =>
     setNoteDraft((prev) => {
       const next = new Map(prev);
       next.set(k, v);
@@ -73,6 +81,14 @@ export function RosterMonthTable(props: {
     setLeaveDraft((prev) => {
       const next = new Map(prev);
       next.set(dutyDate, v);
+      return next;
+    });
+
+  const clearNoteDraft = (k: EntryKey) =>
+    setNoteDraft((prev) => {
+      if (!prev.has(k)) return prev;
+      const next = new Map(prev);
+      next.delete(k);
       return next;
     });
 
@@ -117,46 +133,101 @@ export function RosterMonthTable(props: {
 
               {shifts.map((shift) => {
                 const key: ShiftKey = `${dutyDate}:${shift}`;
-                const entry = byDateShift.get(key);
-                const staffId = entry?.staff_id ?? "";
-                const note = entry?.responsibility_note ?? "";
-                const noteValue = getNoteDraft(key, note);
+                const entries = byDateShift.get(key) ?? [];
+                const newKey: EntryKey = `new:${key}`;
+                const newNoteValue = getNoteDraft(newKey, "");
 
                 return (
                   <React.Fragment key={shift}>
                     <td className="py-3 pr-4 align-top">
-                      <Select
-                        value={staffId}
-                        onValueChange={(v) => {
-                          const dutyNote = getNoteDraft(key, note);
-                          onUpsertShift({ dutyDate, shift, staffId: v, dutyNote });
-                        }}
-                      >
-                        <SelectTrigger className="h-8 w-[220px] text-xs">
-                          <SelectValue placeholder="Select staff…" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {staff.map((s) => (
-                            <SelectItem key={s.id} value={s.id}>
-                              {s.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <div className="flex w-[220px] flex-col gap-2">
+                        {entries.map((entry) => (
+                          <div key={entry.id} className="flex items-center gap-2">
+                            <Select
+                              value={entry.staff_id}
+                              onValueChange={(v) => {
+                                const dutyNote = getNoteDraft(entry.id, entry.responsibility_note ?? "");
+                                onUpdateShiftEntry({ id: entry.id, staffId: v, dutyNote });
+                              }}
+                            >
+                              <SelectTrigger className="h-8 flex-1 text-xs">
+                                <SelectValue placeholder="Select staff…" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {staff.map((s) => (
+                                  <SelectItem key={s.id} value={s.id}>
+                                    {s.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => onRemoveShiftEntry({ id: entry.id })}
+                              aria-label="Remove staff"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ))}
+
+                        <div className="flex items-center gap-2">
+                          <Select
+                            value={""}
+                            onValueChange={(v) => {
+                              onAddShiftEntry({ dutyDate, shift, staffId: v, dutyNote: newNoteValue });
+                              clearNoteDraft(newKey);
+                            }}
+                          >
+                            <SelectTrigger className="h-8 flex-1 text-xs">
+                              <SelectValue placeholder="Add staff…" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {staff.map((s) => (
+                                <SelectItem key={s.id} value={s.id}>
+                                  {s.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Button type="button" variant="ghost" size="icon" className="h-8 w-8" aria-label="Add another staff" disabled>
+                            <Plus className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
                     </td>
 
                     <td className="py-3 pr-4 align-top">
-                      <Input
-                        value={noteValue}
-                        onChange={(e) => setNote(key, e.target.value)}
-                        onBlur={() => {
-                          if (!staffId) return; // DB requires staff for shift rows
-                          onUpsertShift({ dutyDate, shift, staffId, dutyNote: noteValue });
-                        }}
-                        disabled={!staffId}
-                        placeholder={!staffId ? "Select staff first" : "Duty note…"}
-                        className="h-8 w-[220px] text-xs"
-                      />
+                      <div className="flex w-[220px] flex-col gap-2">
+                        {entries.map((entry) => {
+                          const note = entry.responsibility_note ?? "";
+                          const noteValue = getNoteDraft(entry.id, note);
+
+                          return (
+                            <Input
+                              key={entry.id}
+                              value={noteValue}
+                              onChange={(e) => setNote(entry.id, e.target.value)}
+                              onBlur={() => {
+                                onUpdateShiftEntry({ id: entry.id, staffId: entry.staff_id, dutyNote: noteValue });
+                              }}
+                              placeholder="Duty note…"
+                              className="h-8 text-xs"
+                            />
+                          );
+                        })}
+
+                        <Input
+                          value={newNoteValue}
+                          onChange={(e) => setNote(newKey, e.target.value)}
+                          placeholder={"Optional note before adding"}
+                          className="h-8 text-xs"
+                        />
+                      </div>
                     </td>
                   </React.Fragment>
                 );
@@ -170,7 +241,7 @@ export function RosterMonthTable(props: {
                     const v = getLeaveDraft(dutyDate, leaveValue);
                     onSetLeaveStatus({ dutyDate, value: v });
                   }}
-                  placeholder="CL / EL / Day Off…"
+                  placeholder="Name (CL) / Name (Day Off)…"
                   className="h-8 w-[220px] text-xs"
                 />
               </td>

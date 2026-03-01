@@ -80,7 +80,7 @@ export default function RosterPrint() {
       .eq("institution_id", activeInstitutionId ?? "00000000-0000-0000-0000-000000000000")
       .order("duty_date", { ascending: true });
 
-    const byDateShift = new Map<string, { staff: string; note: string }>();
+    const byDateShift = new Map<string, { staff: string; note: string }[]>();
     for (const r of (rosterRes.data ?? []) as any[]) {
       const d = String(r.duty_date);
       if (hasSelection && !selectedSet.has(d)) continue;
@@ -88,7 +88,11 @@ export default function RosterPrint() {
       const shift = String(r.shift) as "morning" | "evening" | "night";
       const name = r.staff?.name ?? "—";
       const note = String(r.responsibility_note ?? "").trim();
-      byDateShift.set(`${d}:${shift}`, { staff: name, note: note || "—" });
+
+      const k = `${d}:${shift}`;
+      const arr = byDateShift.get(k) ?? [];
+      arr.push({ staff: name, note });
+      byDateShift.set(k, arr);
     }
 
     const leaveStatusByDate = new Map<string, string>();
@@ -106,6 +110,21 @@ export default function RosterPrint() {
       ]),
     ).sort();
 
+    const fmtStaff = (arr?: { staff: string; note: string }[]) => {
+      if (!arr?.length) return "—";
+      return arr.map((x) => x.staff).join(", ");
+    };
+
+    const fmtNotes = (arr?: { staff: string; note: string }[]) => {
+      if (!arr?.length) return "—";
+      return arr
+        .map((x) => {
+          const t = x.note.trim();
+          return t ? `${x.staff}: ${t}` : x.staff;
+        })
+        .join("\n");
+    };
+
     setRows(
       dates.map((d) => {
         const m = byDateShift.get(`${d}:morning`);
@@ -114,12 +133,12 @@ export default function RosterPrint() {
 
         return {
           duty_date: d,
-          morning_staff: m?.staff ?? "—",
-          morning_note: m?.note ?? "—",
-          evening_staff: e?.staff ?? "—",
-          evening_note: e?.note ?? "—",
-          night_staff: n?.staff ?? "—",
-          night_note: n?.note ?? "—",
+          morning_staff: fmtStaff(m),
+          morning_note: fmtNotes(m),
+          evening_staff: fmtStaff(e),
+          evening_note: fmtNotes(e),
+          night_staff: fmtStaff(n),
+          night_note: fmtNotes(n),
           leave_status: leaveStatusByDate.get(d) ?? "—",
         };
       }),
