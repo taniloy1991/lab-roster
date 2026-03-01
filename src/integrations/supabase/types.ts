@@ -810,31 +810,43 @@ export type Database = {
         Row: {
           created_at: string
           duty_date: string
+          evening_duty_note: string | null
           id: string
           institution_id: string
           is_friday: boolean | null
           is_govt_holiday: boolean | null
+          leave_status: string | null
           leave_type: string | null
+          morning_duty_note: string | null
+          night_duty_note: string | null
           updated_at: string
         }
         Insert: {
           created_at?: string
           duty_date: string
+          evening_duty_note?: string | null
           id?: string
           institution_id: string
           is_friday?: boolean | null
           is_govt_holiday?: boolean | null
+          leave_status?: string | null
           leave_type?: string | null
+          morning_duty_note?: string | null
+          night_duty_note?: string | null
           updated_at?: string
         }
         Update: {
           created_at?: string
           duty_date?: string
+          evening_duty_note?: string | null
           id?: string
           institution_id?: string
           is_friday?: boolean | null
           is_govt_holiday?: boolean | null
+          leave_status?: string | null
           leave_type?: string | null
+          morning_duty_note?: string | null
+          night_duty_note?: string | null
           updated_at?: string
         }
         Relationships: [

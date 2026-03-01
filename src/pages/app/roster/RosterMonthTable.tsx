@@ -1,6 +1,5 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 
-import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
@@ -9,41 +8,43 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 
 import type { Shift, StaffRow } from "./types";
-import type { VisualEntry, VisualLeaveType } from "./useRosterVisualMonth";
+import type { VisualEntry } from "./useRosterVisualMonth";
+
+type ShiftKey = `${string}:${Shift}`;
 
 export function RosterMonthTable(props: {
   monthDays: string[];
   staff: StaffRow[];
-  staffName: Map<string, string>;
   shifts: Shift[];
+
   selectedDates: Set<string>;
   onToggleDate: (dutyDate: string) => void;
   onToggleAll: () => void;
-  byDateShift: Map<string, VisualEntry[]>;
-  leaveStaffByDate: Map<string, { entryId: string; staffId: string | null; leaveType: VisualLeaveType }>;
-  leaveOptions: Array<{ value: VisualLeaveType; label: string }>;
-  onSetLeave: (params: { dutyDate: string; leaveType: VisualLeaveType; staffId: string }) => void;
-  onOpenLeaveAssign: (params: { dutyDate: string; entry?: { entryId: string; staffId: string | null; leaveType: VisualLeaveType } }) => void;
-  onOpenAssign: (params: { dutyDate: string; shift: Shift; entry?: VisualEntry }) => void;
-  onRemoveEntry: (entryId: string) => void;
+
+  // Single entry per date+shift
+  byDateShift: Map<string, VisualEntry>;
+
+  // Manual per-date leave/status text (stored in roster_days.leave_status)
+  leaveStatusByDate: Map<string, string>;
+  onSetLeaveStatus: (params: { dutyDate: string; value: string }) => void;
+
+  // Planning assignment write
+  onUpsertShift: (params: { dutyDate: string; shift: Shift; staffId: string; dutyNote: string }) => void;
 }) {
   const {
     monthDays,
     staff,
-    staffName,
     shifts,
     selectedDates,
     onToggleDate,
     onToggleAll,
     byDateShift,
-    leaveStaffByDate,
-    leaveOptions,
-    onSetLeave,
-    onOpenLeaveAssign,
-    onOpenAssign,
-    onRemoveEntry,
+    leaveStatusByDate,
+    onSetLeaveStatus,
+    onUpsertShift,
   } = props;
 
   const selection = useMemo(() => {
@@ -55,8 +56,28 @@ export function RosterMonthTable(props: {
   const headerChecked: boolean | "indeterminate" =
     selection.selected === 0 ? false : selection.selected === selection.total ? true : "indeterminate";
 
+  // Local drafts to keep typing snappy; commit on blur
+  const [noteDraft, setNoteDraft] = useState<Map<ShiftKey, string>>(() => new Map());
+  const [leaveDraft, setLeaveDraft] = useState<Map<string, string>>(() => new Map());
+
+  const getNoteDraft = (k: ShiftKey, fallback: string) => noteDraft.get(k) ?? fallback;
+  const setNote = (k: ShiftKey, v: string) =>
+    setNoteDraft((prev) => {
+      const next = new Map(prev);
+      next.set(k, v);
+      return next;
+    });
+
+  const getLeaveDraft = (dutyDate: string, fallback: string) => leaveDraft.get(dutyDate) ?? fallback;
+  const setLeave = (dutyDate: string, v: string) =>
+    setLeaveDraft((prev) => {
+      const next = new Map(prev);
+      next.set(dutyDate, v);
+      return next;
+    });
+
   return (
-    <table className="w-full min-w-[1120px] text-sm">
+    <table className="w-full min-w-[1320px] text-sm">
       <thead className="text-left text-xs text-muted-foreground">
         <tr className="border-b">
           <th className="w-10 py-3 pr-3">
@@ -65,22 +86,22 @@ export function RosterMonthTable(props: {
             </div>
           </th>
           <th className="py-3 pr-4">Date</th>
-          <th className="py-3 pr-4">Leave staff</th>
-          <th className="py-3 pr-4">Leave (visual only)</th>
+
           {shifts.map((s) => (
-            <th key={s} className="py-3 pr-4 capitalize">
-              {s}
-            </th>
+            <React.Fragment key={s}>
+              <th className="py-3 pr-4 capitalize">{s} staff</th>
+              <th className="py-3 pr-4 capitalize">{s} duty note</th>
+            </React.Fragment>
           ))}
+
+          <th className="py-3 pr-4">Leave / Status</th>
         </tr>
       </thead>
 
       <tbody>
         {monthDays.map((dutyDate) => {
           const checked = selectedDates.has(dutyDate);
-          const leaveEntry = leaveStaffByDate.get(dutyDate);
-          const leaveStaffId = leaveEntry?.staffId ?? "";
-          const currentLeave = leaveEntry?.leaveType ?? "none";
+          const leaveValue = leaveStatusByDate.get(dutyDate) ?? "";
 
           return (
             <tr key={dutyDate} className="border-b last:border-b-0">
@@ -94,103 +115,65 @@ export function RosterMonthTable(props: {
                 <div className="font-medium">{dutyDate}</div>
               </td>
 
-              <td className="py-3 pr-4 align-top">
-                <div className="flex flex-col gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="h-8 w-[200px] justify-start px-2 text-xs"
-                    onClick={() => onOpenLeaveAssign({ dutyDate, entry: leaveEntry })}
-                  >
-                    {leaveStaffId ? (staffName.get(leaveStaffId) ?? "Unknown") : "Select Staff"}
-                  </Button>
-
-                  {leaveStaffId && currentLeave !== "none" ? (
-                    <div className="text-xs text-muted-foreground">
-                      {(staffName.get(leaveStaffId) ?? "Unknown") + " — " + (leaveOptions.find((o) => o.value === currentLeave)?.label ?? "")}
-                    </div>
-                  ) : (
-                    <div className="text-xs text-muted-foreground">No leave selected.</div>
-                  )}
-                </div>
-              </td>
-
-              <td className="py-3 pr-4 align-top">
-                <Select
-                  value={currentLeave}
-                  onValueChange={(v) => {
-                    if (!leaveStaffId) return;
-                    onSetLeave({ dutyDate, staffId: leaveStaffId, leaveType: v as VisualLeaveType });
-                  }}
-                  disabled={!leaveStaffId}
-                >
-                  <SelectTrigger className="h-8 w-[200px] text-xs">
-                    <SelectValue placeholder="Select Leave" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {leaveOptions.map((o) => (
-                      <SelectItem key={o.value} value={o.value}>
-                        {o.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </td>
-
               {shifts.map((shift) => {
-                const list = byDateShift.get(`${dutyDate}:${shift}`) ?? [];
+                const key: ShiftKey = `${dutyDate}:${shift}`;
+                const entry = byDateShift.get(key);
+                const staffId = entry?.staff_id ?? "";
+                const note = entry?.responsibility_note ?? "";
+                const noteValue = getNoteDraft(key, note);
 
                 return (
-                  <td key={shift} className="py-3 pr-4 align-top">
-                    <div className="flex flex-col gap-2">
-                      <div className="flex flex-wrap items-start gap-2">
-                        {list.map((e) => {
-                          const name = e.staff_id ? staffName.get(String(e.staff_id)) ?? "Unknown" : "Unknown";
-                          const note = String(e.responsibility_note ?? "").trim();
+                  <React.Fragment key={shift}>
+                    <td className="py-3 pr-4 align-top">
+                      <Select
+                        value={staffId}
+                        onValueChange={(v) => {
+                          const dutyNote = getNoteDraft(key, note);
+                          onUpsertShift({ dutyDate, shift, staffId: v, dutyNote });
+                        }}
+                      >
+                        <SelectTrigger className="h-8 w-[220px] text-xs">
+                          <SelectValue placeholder="Select staff…" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {staff.map((s) => (
+                            <SelectItem key={s.id} value={s.id}>
+                              {s.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </td>
 
-                          return (
-                            <div
-                              key={e.id}
-                              className="flex items-center gap-2 rounded-md border border-border bg-card px-2 py-1 text-xs"
-                            >
-                              <button
-                                type="button"
-                                onClick={() => onOpenAssign({ dutyDate, shift, entry: e })}
-                                className="min-w-0 truncate text-left"
-                                title={note ? `${name} — ${note}` : name}
-                              >
-                                <span className="font-medium">{name}</span>
-                                {note ? <span className="text-muted-foreground"> — {note}</span> : null}
-                              </button>
-                              <button
-                                type="button"
-                                className="rounded-sm px-1 text-muted-foreground hover:text-foreground"
-                                onClick={() => onRemoveEntry(e.id)}
-                                aria-label="Remove"
-                              >
-                                ×
-                              </button>
-                            </div>
-                          );
-                        })}
-
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="h-8 px-2 text-xs"
-                          onClick={() => onOpenAssign({ dutyDate, shift })}
-                        >
-                          Select Staff
-                        </Button>
-                      </div>
-
-                      {list.length === 0 ? <div className="text-xs text-muted-foreground">No staff selected.</div> : null}
-                    </div>
-                  </td>
+                    <td className="py-3 pr-4 align-top">
+                      <Input
+                        value={noteValue}
+                        onChange={(e) => setNote(key, e.target.value)}
+                        onBlur={() => {
+                          if (!staffId) return; // DB requires staff for shift rows
+                          onUpsertShift({ dutyDate, shift, staffId, dutyNote: noteValue });
+                        }}
+                        disabled={!staffId}
+                        placeholder={!staffId ? "Select staff first" : "Duty note…"}
+                        className="h-8 w-[220px] text-xs"
+                      />
+                    </td>
+                  </React.Fragment>
                 );
               })}
+
+              <td className="py-3 pr-4 align-top">
+                <Input
+                  value={getLeaveDraft(dutyDate, leaveValue)}
+                  onChange={(e) => setLeave(dutyDate, e.target.value)}
+                  onBlur={() => {
+                    const v = getLeaveDraft(dutyDate, leaveValue);
+                    onSetLeaveStatus({ dutyDate, value: v });
+                  }}
+                  placeholder="CL / EL / Day Off…"
+                  className="h-8 w-[220px] text-xs"
+                />
+              </td>
             </tr>
           );
         })}
@@ -198,3 +181,4 @@ export function RosterMonthTable(props: {
     </table>
   );
 }
+
