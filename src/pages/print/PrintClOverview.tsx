@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 
 import { supabase } from "@/integrations/supabase/client";
 import { PrintLayout } from "@/components/print/PrintLayout";
+import { InstitutionPdfHeader } from "@/components/print/InstitutionPdfHeader";
 import { BirdemMicrobiologySignatures } from "@/components/print/BirdemMicrobiologySignatures";
 import { cn } from "@/lib/utils";
 
@@ -55,10 +56,9 @@ export default function PrintClOverview() {
 
   return (
     <PrintLayout className="print:pt-6">
-      <header className="space-y-2 text-center">
-        <div className="text-lg font-semibold">Department of Microbiology</div>
-        <div className="text-base font-semibold">BIRDEM GENERAL HOSPITAL</div>
-        <div className="pt-4 text-xl font-semibold">{title}</div>
+      <header className="text-center">
+        <InstitutionPdfHeader />
+        <div className="pt-6 text-xl font-semibold">{title}</div>
       </header>
 
       <section className="mt-8 space-y-2">
