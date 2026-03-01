@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
+import { Calendar } from "@/components/ui/calendar";
 import { KpiCards, type KpiItem } from "./lab/KpiCards";
 import { TodayDutyOverview, type TodayDutyShift } from "./lab/TodayDutyOverview";
 
@@ -24,6 +25,28 @@ function daysInclusive(start: Date, end: Date) {
   const ms = 24 * 60 * 60 * 1000;
   return Math.floor((end.getTime() - start.getTime()) / ms) + 1;
 }
+
+function BdClock() {
+  const [now, setNow] = useState(() => new Date());
+
+  useEffect(() => {
+    const t = window.setInterval(() => setNow(new Date()), 1000);
+    return () => window.clearInterval(t);
+  }, []);
+
+  const label = useMemo(() => {
+    return new Intl.DateTimeFormat("en-GB", {
+      timeZone: "Asia/Dhaka",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: true,
+    }).format(now);
+  }, [now]);
+
+  return <div className="mt-1 text-lg font-semibold tabular-nums text-foreground">{label}</div>;
+}
+
 
 export default function LabDashboard() {
   const { activeInstitutionId } = useAuth();
@@ -291,16 +314,32 @@ export default function LabDashboard() {
         </div>
       </header>
 
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-0.5 text-sm">
           <div>
             <span className="text-muted-foreground">Institution: </span>
             <span className="font-medium">{institutionName ?? "—"}</span>
           </div>
-          <div className="text-xs text-muted-foreground">Prepared by Asif Hossain</div>
+          <div className="text-xs text-muted-foreground">Prepared by Md. Asif Hossain, Research Assistant.</div>
         </div>
-        <div className="text-xs text-muted-foreground">
-          Last update: {lastUpdatedAt ? format(parseISO(lastUpdatedAt), "dd MMM yyyy, p") : "—"}
+
+        <div className="flex flex-col gap-3 sm:items-end">
+          <div className="text-xs text-muted-foreground">
+            Last update: {lastUpdatedAt ? format(parseISO(lastUpdatedAt), "dd MMM yyyy, p") : "—"}
+          </div>
+
+          <div className="grid w-full gap-3 sm:w-auto sm:grid-cols-2">
+            <div className="rounded-md border border-border bg-background p-3">
+              <div className="text-xs font-medium text-muted-foreground">BD Time</div>
+              <BdClock />
+            </div>
+            <div className="rounded-md border border-border bg-background p-3">
+              <div className="text-xs font-medium text-muted-foreground">Calendar</div>
+              <div className="mt-2">
+                <Calendar mode="single" selected={new Date()} />
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
