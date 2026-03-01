@@ -5,6 +5,7 @@ import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/providers/AuthProvider";
 import { PrintLayout } from "@/components/print/PrintLayout";
+import { InstitutionPdfHeader } from "@/components/print/InstitutionPdfHeader";
 
 type ClBalanceRow = { staff_id: string | null; name: string | null; remaining_days: number | null };
 type OffBalanceRow = { staff_id: string | null; name: string | null; off_balance: number | null };
@@ -112,8 +113,7 @@ export default function PrintMonthlyReport() {
   return (
     <PrintLayout pageClassName="monthly-print-page" className="bg-card">
       <header className="text-center">
-        <div className="text-base font-semibold leading-tight">Department of Microbiology</div>
-        <div className="text-base font-semibold leading-tight">BIRDEM General Hospital</div>
+        <InstitutionPdfHeader />
 
         <h1 className="mt-6 text-xl font-semibold tracking-tight">{monthTitle}</h1>
       </header>

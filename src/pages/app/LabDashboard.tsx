@@ -267,9 +267,17 @@ export default function LabDashboard() {
   return (
     <div className="space-y-6">
       <header className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-        <div>
-          <h2 className="text-2xl font-semibold tracking-tight">Overview</h2>
-          <p className="text-sm text-muted-foreground">Lab operational snapshot + monthly leave & OFF balance by staff.</p>
+        <div className="flex items-center gap-3">
+          <img
+            src="/images/birdem-logo.png"
+            alt="BIRDEM General Hospital logo"
+            className="h-10 w-auto shrink-0"
+            loading="eager"
+          />
+          <div>
+            <h2 className="text-2xl font-semibold tracking-tight">Overview</h2>
+            <p className="text-sm text-muted-foreground">Lab operational snapshot + monthly leave & OFF balance by staff.</p>
+          </div>
         </div>
 
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">

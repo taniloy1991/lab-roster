@@ -28,7 +28,8 @@ export function InstitutionPdfHeader() {
     staleTime: 5 * 60 * 1000,
   });
 
-  const logo = (logoUrl ?? "").trim();
+  const fallbackLogo = "/images/birdem-logo.png";
+  const logo = (logoUrl ?? "").trim() || fallbackLogo;
 
   return (
     <div className="mx-auto max-w-5xl px-4">
