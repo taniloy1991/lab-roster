@@ -65,12 +65,41 @@ export default function RosterPrint() {
 
     const rosterRes = await supabase
       .from("roster_visual_entries" as any)
-      .select("duty_date,shift,staff_id,responsibility_note, staff:staff_id(name)")
+      .select("duty_date,shift,staff_id,responsibility_note,institution_id")
+      .eq("institution_id", activeInstitutionId ?? "00000000-0000-0000-0000-000000000000")
       .gte("duty_date", start)
       .lte("duty_date", end)
       .not("shift", "is", null)
       .order("duty_date", { ascending: true })
       .order("created_at", { ascending: true });
+
+    const staffIds = Array.from(
+      new Set<string>(((rosterRes.data ?? []) as any[]).map((r) => String(r.staff_id)).filter((x) => x && x !== "null")),
+    );
+
+    const staffNameById = new Map<string, string>();
+    if (staffIds.length) {
+      const staffRes = await supabase.from("staff").select("id,name").in("id", staffIds);
+      for (const s of (staffRes.data ?? []) as any[]) {
+        staffNameById.set(String(s.id), String(s.name ?? "").trim());
+      }
+    }
+
+    const byDateShift = new Map<string, { staff: string; note: string }[]>();
+    for (const r of (rosterRes.data ?? []) as any[]) {
+      const d = String(r.duty_date);
+      if (hasSelection && !selectedSet.has(d)) continue;
+
+      const shift = String(r.shift) as "morning" | "evening" | "night";
+      const sid = String(r.staff_id ?? "");
+      const name = staffNameById.get(sid) ?? "—";
+      const note = String(r.responsibility_note ?? "").trim();
+
+      const k = `${d}:${shift}`;
+      const arr = byDateShift.get(k) ?? [];
+      arr.push({ staff: name, note });
+      byDateShift.set(k, arr);
+    }
 
     const daysRes = await supabase
       .from("roster_days")
@@ -80,21 +109,6 @@ export default function RosterPrint() {
       .eq("institution_id", activeInstitutionId ?? "00000000-0000-0000-0000-000000000000")
       .order("duty_date", { ascending: true });
 
-    const byDateShift = new Map<string, { staff: string; note: string }[]>();
-    for (const r of (rosterRes.data ?? []) as any[]) {
-      const d = String(r.duty_date);
-      if (hasSelection && !selectedSet.has(d)) continue;
-
-      const shift = String(r.shift) as "morning" | "evening" | "night";
-      const name = r.staff?.name ?? "—";
-      const note = String(r.responsibility_note ?? "").trim();
-
-      const k = `${d}:${shift}`;
-      const arr = byDateShift.get(k) ?? [];
-      arr.push({ staff: name, note });
-      byDateShift.set(k, arr);
-    }
-
     const leaveStatusByDate = new Map<string, string>();
     for (const r of (daysRes.data ?? []) as any[]) {
       const d = String(r.duty_date);
@@ -102,7 +116,6 @@ export default function RosterPrint() {
       const v = String(r.leave_status ?? "").trim();
       if (v) leaveStatusByDate.set(d, v);
     }
-
     const dates = Array.from(
       new Set<string>([
         ...leaveStatusByDate.keys(),
