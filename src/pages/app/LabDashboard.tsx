@@ -292,9 +292,12 @@ export default function LabDashboard() {
       </header>
 
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div className="text-sm">
-          <span className="text-muted-foreground">Institution: </span>
-          <span className="font-medium">{institutionName ?? "—"}</span>
+        <div className="space-y-0.5 text-sm">
+          <div>
+            <span className="text-muted-foreground">Institution: </span>
+            <span className="font-medium">{institutionName ?? "—"}</span>
+          </div>
+          <div className="text-xs text-muted-foreground">Prepared by Asif Hossain</div>
         </div>
         <div className="text-xs text-muted-foreground">
           Last update: {lastUpdatedAt ? format(parseISO(lastUpdatedAt), "dd MMM yyyy, p") : "—"}

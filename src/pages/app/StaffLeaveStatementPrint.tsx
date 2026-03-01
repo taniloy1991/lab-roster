@@ -121,6 +121,12 @@ export default function StaffLeaveStatementPrint() {
             </table>
           </CardContent>
         </Card>
+
+        <footer className="mt-10">
+          <div className="text-sm text-muted-foreground">
+            Prepared By: <span className="text-foreground">Asif Hossain</span>
+          </div>
+        </footer>
       </div>
     </>
   );

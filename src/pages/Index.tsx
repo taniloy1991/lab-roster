@@ -30,7 +30,7 @@ const Index = () => {
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <Card className="w-full max-w-lg">
         <CardHeader>
-          <CardTitle>Laboratory Roaster Management</CardTitle>
+          <CardTitle>Laboratory Roster Management</CardTitle>
           <CardDescription>Minimal multi-institution roster, leave & OFF balance system.</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-2 sm:flex-row">
