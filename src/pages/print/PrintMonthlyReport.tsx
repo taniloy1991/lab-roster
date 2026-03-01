@@ -259,7 +259,12 @@ export default function PrintMonthlyReport() {
   }, [activeInstitutionId, session, month, range.start, range.end]);
 
   return (
-    <PrintLayout pageClassName="monthly-print-page" className="bg-card">
+    <PrintLayout
+      pageClassName="monthly-print-page"
+      className="bg-card"
+      footer={<BirdemMicrobiologySignatures />}
+      footerClassName="print:break-inside-avoid"
+    >
       <header className="text-center">
         <InstitutionPdfHeader />
         <h1 className="mt-6 text-xl font-semibold tracking-tight">{monthTitle}</h1>
@@ -444,8 +449,6 @@ export default function PrintMonthlyReport() {
           </section>
         ))}
       </section>
-
-      <BirdemMicrobiologySignatures className="mt-8 print:break-inside-avoid" />
     </PrintLayout>
   );
 }

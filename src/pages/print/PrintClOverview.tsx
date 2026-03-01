@@ -55,7 +55,11 @@ export default function PrintClOverview() {
   }, [staffId, year]);
 
   return (
-    <PrintLayout className="print:pt-6">
+    <PrintLayout
+      className="print:pt-6"
+      footer={<BirdemMicrobiologySignatures />}
+      footerClassName="print:break-inside-avoid"
+    >
       <header className="text-center">
         <InstitutionPdfHeader />
         <div className="pt-6 text-xl font-semibold">{title}</div>
@@ -88,8 +92,7 @@ export default function PrintClOverview() {
               </tr>
             ) : (
               rows.map((r, idx) => (
-                <tr key={idx} className={cn("border-b last:border-b-0")}
-                >
+                <tr key={idx} className={cn("border-b last:border-b-0")}>
                   <td className="py-2 pr-4 tabular-nums">{r.start_date}</td>
                   <td className="py-2 pr-4 tabular-nums">{r.end_date}</td>
                   <td className="py-2 pr-4 text-right tabular-nums">{r.total_days}</td>
@@ -99,8 +102,6 @@ export default function PrintClOverview() {
           </tbody>
         </table>
       </section>
-
-      <BirdemMicrobiologySignatures className="mt-12" />
     </PrintLayout>
   );
 }

@@ -175,7 +175,12 @@ export default function RosterPrint() {
   if (!session) return <Navigate to="/login" replace />;
 
   return (
-    <PrintLayout pageClassName="roster-print-page" className="bg-card">
+    <PrintLayout
+      pageClassName="roster-print-page"
+      className="bg-card"
+      footer={<BirdemMicrobiologySignatures />}
+      footerClassName="print:break-inside-avoid"
+    >
       <header className="text-center">
         <InstitutionPdfHeader />
 
@@ -298,10 +303,6 @@ export default function RosterPrint() {
             })}
           </div>
         </div>
-      </section>
-
-      <section className="mt-6 print:mt-8 print:break-inside-avoid">
-        <BirdemMicrobiologySignatures />
       </section>
     </PrintLayout>
   );
