@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 
 import { Checkbox } from "@/components/ui/checkbox";
@@ -18,6 +18,8 @@ import type { VisualEntry } from "./useRosterVisualMonth";
 type ShiftKey = `${string}:${Shift}`;
 
 type EntryKey = string; // VisualEntry.id or "new:${date}:${shift}" for draft rows
+
+const AUTOSAVE_DEBOUNCE_MS = 600;
 
 export function RosterMonthTable(props: {
   monthDays: string[];
@@ -64,9 +66,21 @@ export function RosterMonthTable(props: {
   const headerChecked: boolean | "indeterminate" =
     selection.selected === 0 ? false : selection.selected === selection.total ? true : "indeterminate";
 
-  // Local drafts to keep typing snappy; commit on blur
+  // Local drafts to keep typing snappy; commit via debounce autosave
   const [noteDraft, setNoteDraft] = useState<Map<EntryKey, string>>(() => new Map());
   const [leaveDraft, setLeaveDraft] = useState<Map<string, string>>(() => new Map());
+
+  const noteTimersRef = useRef<Map<string, number>>(new Map());
+  const leaveTimersRef = useRef<Map<string, number>>(new Map());
+  const lastSavedNoteRef = useRef<Map<string, string>>(new Map());
+  const lastSavedLeaveRef = useRef<Map<string, string>>(new Map());
+
+  useEffect(() => {
+    return () => {
+      for (const t of noteTimersRef.current.values()) window.clearTimeout(t);
+      for (const t of leaveTimersRef.current.values()) window.clearTimeout(t);
+    };
+  }, []);
 
   const getNoteDraft = (k: EntryKey, fallback: string) => noteDraft.get(k) ?? fallback;
   const setNote = (k: EntryKey, v: string) =>
@@ -91,6 +105,40 @@ export function RosterMonthTable(props: {
       next.delete(k);
       return next;
     });
+
+  const scheduleNoteAutosave = (p: { id: string; staffId: string; dutyNote: string }) => {
+    const note = p.dutyNote;
+    const last = lastSavedNoteRef.current.get(p.id);
+    if (last === note) return;
+
+    const prevTimer = noteTimersRef.current.get(p.id);
+    if (prevTimer) window.clearTimeout(prevTimer);
+
+    const timer = window.setTimeout(() => {
+      lastSavedNoteRef.current.set(p.id, note);
+      onUpdateShiftEntry({ id: p.id, staffId: p.staffId, dutyNote: note });
+      noteTimersRef.current.delete(p.id);
+    }, AUTOSAVE_DEBOUNCE_MS);
+
+    noteTimersRef.current.set(p.id, timer);
+  };
+
+  const scheduleLeaveAutosave = (p: { dutyDate: string; value: string }) => {
+    const v = p.value;
+    const last = lastSavedLeaveRef.current.get(p.dutyDate);
+    if (last === v) return;
+
+    const prevTimer = leaveTimersRef.current.get(p.dutyDate);
+    if (prevTimer) window.clearTimeout(prevTimer);
+
+    const timer = window.setTimeout(() => {
+      lastSavedLeaveRef.current.set(p.dutyDate, v);
+      onSetLeaveStatus({ dutyDate: p.dutyDate, value: v });
+      leaveTimersRef.current.delete(p.dutyDate);
+    }, AUTOSAVE_DEBOUNCE_MS);
+
+    leaveTimersRef.current.set(p.dutyDate, timer);
+  };
 
   return (
     <table className="w-full min-w-[1320px] text-sm">
@@ -211,9 +259,10 @@ export function RosterMonthTable(props: {
                             <Input
                               key={entry.id}
                               value={noteValue}
-                              onChange={(e) => setNote(entry.id, e.target.value)}
-                              onBlur={() => {
-                                onUpdateShiftEntry({ id: entry.id, staffId: entry.staff_id, dutyNote: noteValue });
+                              onChange={(e) => {
+                                const v = e.target.value;
+                                setNote(entry.id, v);
+                                scheduleNoteAutosave({ id: entry.id, staffId: entry.staff_id, dutyNote: v });
                               }}
                               placeholder="Duty note…"
                               className="h-8 text-xs"
@@ -236,10 +285,10 @@ export function RosterMonthTable(props: {
               <td className="py-3 pr-4 align-top">
                 <Input
                   value={getLeaveDraft(dutyDate, leaveValue)}
-                  onChange={(e) => setLeave(dutyDate, e.target.value)}
-                  onBlur={() => {
-                    const v = getLeaveDraft(dutyDate, leaveValue);
-                    onSetLeaveStatus({ dutyDate, value: v });
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setLeave(dutyDate, v);
+                    scheduleLeaveAutosave({ dutyDate, value: v });
                   }}
                   placeholder="Name (CL) / Name (Day Off)…"
                   className="h-8 w-[220px] text-xs"
