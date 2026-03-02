@@ -5,14 +5,22 @@ import { Separator } from "@/components/ui/separator";
 
 export type TodayDutyShift = {
   shift: "morning" | "evening" | "night";
-  entries: Array<{ staff: string; note: string }>; // multiple staff allowed
+  entries: Array<{ staff: string; note: string }>;
 };
 
 function titleCase(s: string) {
   return s.slice(0, 1).toUpperCase() + s.slice(1);
 }
 
-export function TodayDutyOverview({ dateLabel, shifts }: { dateLabel: string; shifts: TodayDutyShift[] }) {
+export function TodayDutyOverview({
+  dateLabel,
+  shifts,
+  leaveStaffNames = [],
+}: {
+  dateLabel: string;
+  shifts: TodayDutyShift[];
+  leaveStaffNames?: string[];
+}) {
   return (
     <section aria-label="Today's duty overview">
       <Card>
@@ -43,6 +51,20 @@ export function TodayDutyOverview({ dateLabel, shifts }: { dateLabel: string; sh
               {idx !== shifts.length - 1 ? <Separator /> : null}
             </div>
           ))}
+
+          <div className="space-y-2 pt-1">
+            <Separator />
+            <div className="text-sm font-medium">On Leave Today</div>
+            {leaveStaffNames.length ? (
+              <ul className="list-disc space-y-1 pl-5 text-sm">
+                {leaveStaffNames.map((name) => (
+                  <li key={name}>{name}</li>
+                ))}
+              </ul>
+            ) : (
+              <div className="text-sm text-muted-foreground">No staff on leave in today’s roster.</div>
+            )}
+          </div>
         </CardContent>
       </Card>
     </section>
