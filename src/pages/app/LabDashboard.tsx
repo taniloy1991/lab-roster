@@ -30,7 +30,7 @@ function BdClock() {
     }).format(now);
   }, [now]);
 
-  return <div className="mt-0.5 text-base font-semibold tabular-nums text-foreground">{label}</div>;
+  return <div className="mt-0.5 text-base font-semibold tabular-nums text-foreground md:mt-1 md:text-xl">{label}</div>;
 }
 
 export default function LabDashboard() {
@@ -50,6 +50,7 @@ export default function LabDashboard() {
     { shift: "evening", entries: [] },
     { shift: "night", entries: [] },
   ]);
+  const [todayLeaveNames, setTodayLeaveNames] = useState<string[]>([]);
 
   const today = useMemo(() => format(new Date(), "yyyy-MM-dd"), []);
 
@@ -72,7 +73,7 @@ export default function LabDashboard() {
     const staffIds = staff.map((s) => s.id);
     const staffNameById = new Map<string, string>(staff.map((s) => [s.id, s.name]));
 
-    const [holidayRes, todayRosterRes] = await Promise.all([
+    const [holidayRes, todayRosterRes, todayLeaveRosterRes] = await Promise.all([
       supabase
         .from("holidays")
         .select("staff_id,holiday_type")
@@ -86,6 +87,14 @@ export default function LabDashboard() {
         .eq("duty_date", today)
         .not("shift", "is", null)
         .order("created_at", { ascending: true }),
+      supabase
+        .from("roster_visual_entries" as any)
+        .select("staff_id,leave_type")
+        .eq("institution_id", activeInstitutionId)
+        .eq("duty_date", today)
+        .not("staff_id", "is", null)
+        .not("leave_type", "is", null)
+        .neq("leave_type", "none"),
     ]);
 
     const holidayRows = (holidayRes.data ?? []) as HolidayRow[];
@@ -111,11 +120,19 @@ export default function LabDashboard() {
       if (sid) onDutyStaffIds.add(sid);
     }
 
+    const leaveNameSet = new Set<string>();
+    for (const r of (todayLeaveRosterRes.data ?? []) as any[]) {
+      const sid = String(r.staff_id ?? "").trim();
+      const staffName = sid ? staffNameById.get(sid) ?? "" : "";
+      if (staffName) leaveNameSet.add(staffName);
+    }
+
     setTodayDuty([
       { shift: "morning", entries: byShift.get("morning") ?? [] },
       { shift: "evening", entries: byShift.get("evening") ?? [] },
       { shift: "night", entries: byShift.get("night") ?? [] },
     ]);
+    setTodayLeaveNames(Array.from(leaveNameSet).sort((a, b) => a.localeCompare(b)));
 
     setKpis({
       totalStaff: staff.length,
@@ -145,7 +162,7 @@ export default function LabDashboard() {
     <div className="space-y-6">
       <header className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div className="flex items-center gap-3">
-          <img src="/images/birdem-logo.png" alt="BIRDEM General Hospital logo" className="h-10 w-auto shrink-0" loading="eager" />
+          <img src="/images/birdem-logo.png" alt="BIRDEM General Hospital logo" className="h-14 w-auto shrink-0" loading="eager" />
           <div>
             <h2 className="text-2xl font-semibold tracking-tight">Overview</h2>
             <p className="text-sm text-muted-foreground">Live duty and leave snapshot for today.</p>
@@ -170,9 +187,11 @@ export default function LabDashboard() {
         </div>
 
         <div className="grid w-full max-w-full gap-3 sm:w-auto sm:grid-cols-2">
-          <Card className="w-fit max-w-full p-2">
-            <div className="text-[11px] font-medium text-muted-foreground">BD Time</div>
-            <BdClock />
+          <Card className="w-full max-w-full p-3 sm:w-fit md:h-40 md:w-40 md:rounded-full md:p-0">
+            <div className="flex h-full flex-col md:items-center md:justify-center">
+              <div className="text-[11px] font-medium text-muted-foreground md:text-xs">BD Time</div>
+              <BdClock />
+            </div>
           </Card>
 
           <Card className="w-fit max-w-full p-2">
@@ -188,7 +207,11 @@ export default function LabDashboard() {
 
       <KpiCards items={kpiItems} />
 
-      <TodayDutyOverview dateLabel={format(parseISO(`${today}T00:00:00`), "dd MMM yyyy")} shifts={todayDuty} />
+      <TodayDutyOverview
+        dateLabel={format(parseISO(`${today}T00:00:00`), "dd MMM yyyy")}
+        shifts={todayDuty}
+        leaveStaffNames={todayLeaveNames}
+      />
     </div>
   );
 }
