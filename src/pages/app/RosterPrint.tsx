@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
+import { Navigate, useSearchParams } from "react-router-dom";
 import { endOfMonth, format, parseISO, startOfMonth } from "date-fns";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -24,7 +24,7 @@ export default function RosterPrint() {
   const { loading: authLoading, session, activeInstitutionId } = useAuth();
 
   const [params] = useSearchParams();
-  const nav = useNavigate();
+  
 
   const month =
     params.get("month") ??
@@ -192,14 +192,8 @@ export default function RosterPrint() {
 
       <section className="mt-8 print:hidden">
         <div className="flex items-center justify-end gap-2">
-          <Button variant="outline" onClick={() => nav("/app/roster")}>
-            Back
-          </Button>
           <Button variant="outline" onClick={() => window.print()}>
             Print / Save as PDF
-          </Button>
-          <Button onClick={load} disabled={loading}>
-            {loading ? "Loading…" : "Refresh"}
           </Button>
         </div>
       </section>

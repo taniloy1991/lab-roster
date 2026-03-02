@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { format, parseISO } from "date-fns";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -46,24 +46,24 @@ export default function ReportsMonthly() {
     }
   }, [month]);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     if (!activeInstitutionId) return;
     setLoading(true);
 
-    const inst = await supabase.from("institutions").select("name").eq("id", activeInstitutionId).maybeSingle();
-    setInstitutionName(inst.data?.name ?? "");
+    const [inst, staffRes] = await Promise.all([
+      supabase.from("institutions").select("name").eq("id", activeInstitutionId).maybeSingle(),
+      supabase
+        .from("staff")
+        .select("id,name")
+        .eq("institution_id", activeInstitutionId)
+        .eq("is_active", true)
+        .order("name"),
+    ]);
 
-    // Institution-scoped: start from staff list, then pull balances from views by staff_id.
-    const staffRes = await supabase
-      .from("staff")
-      .select("id,name")
-      .eq("institution_id", activeInstitutionId)
-      .eq("is_active", true)
-      .order("name");
+    setInstitutionName(inst.data?.name ?? "");
 
     const staffIds = (staffRes.data ?? []).map((s: any) => String(s.id));
 
-    // Use existing views only (requested): cl_balance_view + off_balance_view
     const [clRes, offRes] = await Promise.all([
       staffIds.length
         ? supabase.from("cl_balance_view").select("staff_id,name,remaining_days").in("staff_id", staffIds)
@@ -103,7 +103,7 @@ export default function ReportsMonthly() {
 
     setRows(Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name)));
     setLoading(false);
-  };
+  }, [activeInstitutionId]);
 
   const loadStaffDetails = async (staffId: string) => {
     if (!activeInstitutionId) return;
@@ -173,8 +173,64 @@ export default function ReportsMonthly() {
 
   useEffect(() => {
     void load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeInstitutionId, month]);
+  }, [load, month]);
+
+  useEffect(() => {
+    if (!activeInstitutionId) return;
+
+    const reloadAll = () => {
+      void load();
+      if (selectedStaffId) void loadStaffDetails(selectedStaffId);
+    };
+
+    const channel = supabase
+      .channel(`monthly-report-${activeInstitutionId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "holidays",
+          filter: `institution_id=eq.${activeInstitutionId}`,
+        },
+        reloadAll,
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "cl_transactions",
+          filter: `institution_id=eq.${activeInstitutionId}`,
+        },
+        reloadAll,
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "general_off_earn",
+          filter: `institution_id=eq.${activeInstitutionId}`,
+        },
+        reloadAll,
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "general_off_deduct",
+          filter: `institution_id=eq.${activeInstitutionId}`,
+        },
+        reloadAll,
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [activeInstitutionId, load, selectedStaffId, year]);
 
   useEffect(() => {
     if (!selectedStaffId) return;
@@ -196,7 +252,7 @@ export default function ReportsMonthly() {
         <header className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between print:hidden">
           <div>
             <h2 className="text-2xl font-semibold tracking-tight">Monthly Leave & OFF Balance Overview</h2>
-            <p className="text-sm text-muted-foreground">Click a staff name to view year details (no print).</p>
+            <p className="text-sm text-muted-foreground">Click staff name for details, or use CL/OFF print buttons directly.</p>
           </div>
           <div className="flex items-center gap-2">
             <Input type="month" value={month} onChange={(e) => setMonth(e.target.value)} className="w-[190px]" />
@@ -228,7 +284,7 @@ export default function ReportsMonthly() {
                 <tr className="border-b">
                   <th className="py-3 pr-4">Staff</th>
                   <th className="py-3 pr-4">CL Remaining</th>
-                  <th className="py-3 pr-4">OFF Balance</th>
+                  <th className="py-3 pr-4">OFF Remaining</th>
                 </tr>
               </thead>
               <tbody>
@@ -252,8 +308,30 @@ export default function ReportsMonthly() {
                           {r.name}
                         </button>
                       </td>
-                      <td className="py-3 pr-4 tabular-nums">{r.clRemaining}</td>
-                      <td className="py-3 pr-4 tabular-nums">{r.offBalance}</td>
+                      <td className="py-3 pr-4 tabular-nums">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span>{r.clRemaining}</span>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => window.open(`/print/cl-overview?staffId=${r.staffId}&year=${year}`, "_blank", "noopener,noreferrer")}
+                          >
+                            CL Print
+                          </Button>
+                        </div>
+                      </td>
+                      <td className="py-3 pr-4 tabular-nums">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span>{r.offBalance}</span>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => window.open(`/print/off-overview?staffId=${r.staffId}`, "_blank", "noopener,noreferrer")}
+                          >
+                            OFF Print
+                          </Button>
+                        </div>
+                      </td>
                     </tr>
                   );
                 })}
@@ -265,9 +343,27 @@ export default function ReportsMonthly() {
         {selectedStaff ? (
           <Card className="print:hidden">
             <CardHeader>
-              <CardTitle className="text-lg">
-                {selectedStaff.name} — Year Details ({year})
-              </CardTitle>
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <CardTitle className="text-lg">
+                  {selectedStaff.name} — Year Details ({year})
+                </CardTitle>
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => window.open(`/print/cl-overview?staffId=${selectedStaff.staffId}&year=${year}`, "_blank", "noopener,noreferrer")}
+                  >
+                    Print CL
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => window.open(`/print/off-overview?staffId=${selectedStaff.staffId}`, "_blank", "noopener,noreferrer")}
+                  >
+                    Print OFF
+                  </Button>
+                </div>
+              </div>
             </CardHeader>
             <CardContent className="space-y-6">
               {detailsError ? <p className="text-sm text-destructive">{detailsError}</p> : null}
