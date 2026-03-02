@@ -30,6 +30,7 @@ import ReportsMonthly from "./pages/app/ReportsMonthly";
 import PrintMonthlyReport from "./pages/print/PrintMonthlyReport";
 import PrintClOverview from "./pages/print/PrintClOverview";
 import PrintOffOverview from "./pages/print/PrintOffOverview";
+import PrintStaffYearDetails from "./pages/print/PrintStaffYearDetails";
 
 const queryClient = new QueryClient();
 
@@ -81,7 +82,14 @@ const App = () => (
                     </RequireAuth>
                   }
                 />
-
+                <Route
+                  path="/print/staff-year-details"
+                  element={
+                    <RequireAuth>
+                      <PrintStaffYearDetails />
+                    </RequireAuth>
+                  }
+                />
                 <Route
                   path="/app"
                   element={
