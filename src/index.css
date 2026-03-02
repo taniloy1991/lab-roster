@@ -114,6 +114,17 @@
   }
 
   @media print {
+    @page {
+      size: A4 portrait;
+      margin: 0;
+    }
+
+    html,
+    body {
+      margin: 0 !important;
+      padding: 0 !important;
+    }
+
     /* Let the PDF header participate in normal flow (no fixed/absolute),
        and keep a clear gap before content. */
     .pdf-header {

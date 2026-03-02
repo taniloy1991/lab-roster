@@ -6,6 +6,7 @@ import { PrintLayout } from "@/components/print/PrintLayout";
 import { InstitutionPdfHeader } from "@/components/print/InstitutionPdfHeader";
 import { BirdemMicrobiologySignatures } from "@/components/print/BirdemMicrobiologySignatures";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
 
 type TxRow = {
@@ -64,6 +65,14 @@ export default function PrintClOverview() {
         <InstitutionPdfHeader />
         <div className="pt-6 text-xl font-semibold">{title}</div>
       </header>
+
+      <section className="mt-6 print:hidden">
+        <div className="flex items-center justify-end gap-2">
+          <Button variant="outline" onClick={() => window.print()}>
+            Print / Save as PDF
+          </Button>
+        </div>
+      </section>
 
       <section className="mt-8 space-y-2">
         <div className="text-sm">

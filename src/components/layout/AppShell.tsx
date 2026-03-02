@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { CalendarDays, ClipboardList, Home, LogOut, Printer, Users } from "lucide-react";
+import { ArrowLeft, CalendarDays, ClipboardList, Home, LogOut, Printer, Users } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -189,6 +189,24 @@ export function AppShell() {
         </aside>
 
         <main className="min-w-0">
+          <div className="mb-3 flex items-center">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="gap-1"
+              onClick={() => {
+                if (window.history.length > 1) {
+                  navigate(-1);
+                  return;
+                }
+                navigate("/app");
+              }}
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back
+            </Button>
+          </div>
           <Outlet />
         </main>
       </div>
