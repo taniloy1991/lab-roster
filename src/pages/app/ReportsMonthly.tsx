@@ -252,7 +252,7 @@ export default function ReportsMonthly() {
         <header className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between print:hidden">
           <div>
             <h2 className="text-2xl font-semibold tracking-tight">Monthly Leave & OFF Balance Overview</h2>
-            <p className="text-sm text-muted-foreground">Click staff name for details, or use CL/OFF print buttons directly.</p>
+            <p className="text-sm text-muted-foreground">Click staff name for selected year details and print.</p>
           </div>
           <div className="flex items-center gap-2">
             <Input type="month" value={month} onChange={(e) => setMonth(e.target.value)} className="w-[190px]" />
@@ -308,30 +308,8 @@ export default function ReportsMonthly() {
                           {r.name}
                         </button>
                       </td>
-                      <td className="py-3 pr-4 tabular-nums">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span>{r.clRemaining}</span>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => window.open(`/print/cl-overview?staffId=${r.staffId}&year=${year}`, "_blank", "noopener,noreferrer")}
-                          >
-                            CL Print
-                          </Button>
-                        </div>
-                      </td>
-                      <td className="py-3 pr-4 tabular-nums">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span>{r.offBalance}</span>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => window.open(`/print/off-overview?staffId=${r.staffId}`, "_blank", "noopener,noreferrer")}
-                          >
-                            OFF Print
-                          </Button>
-                        </div>
-                      </td>
+                      <td className="py-3 pr-4 tabular-nums">{r.clRemaining}</td>
+                      <td className="py-3 pr-4 tabular-nums">{r.offBalance}</td>
                     </tr>
                   );
                 })}
@@ -351,16 +329,15 @@ export default function ReportsMonthly() {
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => window.open(`/print/cl-overview?staffId=${selectedStaff.staffId}&year=${year}`, "_blank", "noopener,noreferrer")}
+                    onClick={() =>
+                      window.open(
+                        `/print/staff-year-details?staffId=${selectedStaff.staffId}&year=${year}`,
+                        "_blank",
+                        "noopener,noreferrer",
+                      )
+                    }
                   >
-                    Print CL
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => window.open(`/print/off-overview?staffId=${selectedStaff.staffId}`, "_blank", "noopener,noreferrer")}
-                  >
-                    Print OFF
+                    Print Details
                   </Button>
                 </div>
               </div>
