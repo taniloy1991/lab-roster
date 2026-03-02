@@ -121,24 +121,20 @@
       margin-bottom: 24px;
     }
 
-    /* Make sure there's room for the fixed footer */
+    /* Shared PrintLayout handles footer in normal flow; avoid fixed footers/padding that can push
+       signature blocks onto an extra page. */
     body {
       padding-top: 0;
-      padding-bottom: 18mm;
+      padding-bottom: 0;
     }
 
     .app-screen-footer {
       display: none !important;
     }
 
+    /* Do not use fixed print footer; print pages provide their own footer via PrintLayout */
     .app-print-footer {
-      display: block;
-      position: fixed;
-      left: 0;
-      right: 0;
-      bottom: 10mm;
-      z-index: 9999;
-      color: hsl(var(--muted-foreground));
+      display: none !important;
     }
 
     /* Standalone print pages: hide app chrome only (NOT the page header/content) */
