@@ -11,6 +11,7 @@ import { TodayDutyOverview, type TodayDutyShift } from "./lab/TodayDutyOverview"
 
 type StaffRow = { id: string; name: string };
 type HolidayRow = { staff_id: string | null; holiday_type: string | null };
+type AppSettingRow = { setting_key: string | null; setting_value: string | null };
 
 function BdClock() {
   const [now, setNow] = useState(() => new Date());
@@ -38,6 +39,9 @@ export default function LabDashboard() {
   const [loading, setLoading] = useState(false);
   const [institutionName, setInstitutionName] = useState<string | null>(null);
   const [lastUpdatedAt, setLastUpdatedAt] = useState<string | null>(null);
+  const [overviewLogo, setOverviewLogo] = useState("/images/birdem-logo.png");
+  const [overviewPreparedByName, setOverviewPreparedByName] = useState("Md. Asif Hossain");
+  const [overviewPreparedByTitle, setOverviewPreparedByTitle] = useState("Research Assistant");
 
   const [kpis, setKpis] = useState<{
     totalStaff: number;
@@ -58,16 +62,47 @@ export default function LabDashboard() {
     if (!activeInstitutionId) return;
     setLoading(true);
 
-    const instRes = await supabase.from("institutions").select("name,updated_at").eq("id", activeInstitutionId).maybeSingle();
+    const settingsKeys = [
+      `overview_logo_url:${activeInstitutionId}`,
+      "overview_logo_url",
+      `overview_prepared_by_name:${activeInstitutionId}`,
+      "overview_prepared_by_name",
+      `overview_prepared_by_title:${activeInstitutionId}`,
+      "overview_prepared_by_title",
+    ];
+
+    const [instRes, staffRes, settingsRes] = await Promise.all([
+      supabase.from("institutions").select("name,updated_at").eq("id", activeInstitutionId).maybeSingle(),
+      supabase
+        .from("staff")
+        .select("id,name")
+        .eq("institution_id", activeInstitutionId)
+        .eq("is_active", true)
+        .order("name"),
+      supabase.from("app_settings").select("setting_key,setting_value").in("setting_key", settingsKeys),
+    ]);
+
     setInstitutionName(instRes.data?.name ?? null);
     setLastUpdatedAt(instRes.data?.updated_at ?? null);
 
-    const staffRes = await supabase
-      .from("staff")
-      .select("id,name")
-      .eq("institution_id", activeInstitutionId)
-      .eq("is_active", true)
-      .order("name");
+    const settingsMap = new Map<string, string>();
+    for (const row of (settingsRes.data ?? []) as AppSettingRow[]) {
+      const key = String(row.setting_key ?? "").trim();
+      const value = String(row.setting_value ?? "").trim();
+      if (key && value) settingsMap.set(key, value);
+    }
+
+    const pickSetting = (specific: string, fallback: string, defaultValue: string) => {
+      return settingsMap.get(specific) ?? settingsMap.get(fallback) ?? defaultValue;
+    };
+
+    setOverviewLogo(pickSetting(`overview_logo_url:${activeInstitutionId}`, "overview_logo_url", "/images/birdem-logo.png"));
+    setOverviewPreparedByName(
+      pickSetting(`overview_prepared_by_name:${activeInstitutionId}`, "overview_prepared_by_name", "Md. Asif Hossain"),
+    );
+    setOverviewPreparedByTitle(
+      pickSetting(`overview_prepared_by_title:${activeInstitutionId}`, "overview_prepared_by_title", "Research Assistant"),
+    );
 
     const staff = (staffRes.data ?? []) as StaffRow[];
     const staffIds = staff.map((s) => s.id);
@@ -162,7 +197,7 @@ export default function LabDashboard() {
     <div className="space-y-6">
       <header className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div className="flex items-center gap-3">
-          <img src="/images/birdem-logo.png" alt="BIRDEM General Hospital logo" className="h-14 w-auto shrink-0" loading="eager" />
+          <img src={overviewLogo} alt="Institution logo" className="h-20 w-auto shrink-0 md:h-24" loading="eager" />
           <div>
             <h2 className="text-2xl font-semibold tracking-tight">Overview</h2>
             <p className="text-sm text-muted-foreground">Live duty and leave snapshot for today.</p>
@@ -180,7 +215,11 @@ export default function LabDashboard() {
             <span className="text-muted-foreground">Institution: </span>
             <span className="font-medium">{institutionName ?? "—"}</span>
           </div>
-          <div className="text-xs text-muted-foreground">Prepared by Md. Asif Hossain, Research Assistant.</div>
+          <div className="text-xs leading-tight text-muted-foreground">
+            <div>Prepared by:</div>
+            <div className="text-foreground">{overviewPreparedByName}</div>
+            <div>{overviewPreparedByTitle}</div>
+          </div>
           <div className="text-xs text-muted-foreground">
             Last update: {lastUpdatedAt ? format(parseISO(lastUpdatedAt), "dd MMM yyyy, p") : "—"}
           </div>
