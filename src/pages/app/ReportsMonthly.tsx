@@ -3,7 +3,7 @@ import { format, parseISO } from "date-fns";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/providers/AuthProvider";
-import { AppPrintHeader } from "@/components/print/AppPrintHeader";
+import { InstitutionPdfHeader } from "@/components/print/InstitutionPdfHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -250,7 +250,7 @@ export default function ReportsMonthly() {
   return (
     <>
       <div className="pdf-header hidden print:block mb-6">
-        <AppPrintHeader />
+        <InstitutionPdfHeader />
       </div>
       <div className="space-y-6">
         <header className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between print:hidden">
