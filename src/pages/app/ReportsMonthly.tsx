@@ -18,6 +18,8 @@ type ClTxRow = { start_date: string; end_date: string; total_days: number };
 type OffEarnRow = { start_date: string; end_date: string; days_earned: number };
 type OffUseRow = { start_date: string; end_date: string; days_deducted: number };
 
+const BIRDEM_INSTITUTION_ID = "cfa40334-46e7-431d-9f77-3f3aa1a6b339";
+
 export default function ReportsMonthly() {
   const { activeInstitutionId } = useAuth();
   const [month, setMonth] = useState(() => format(new Date(), "yyyy-MM"));
@@ -243,6 +245,8 @@ export default function ReportsMonthly() {
     return rows.find((r) => r.staffId === selectedStaffId) ?? null;
   }, [rows, selectedStaffId]);
 
+  const showBalanceColumns = activeInstitutionId !== BIRDEM_INSTITUTION_ID;
+
   return (
     <>
       <div className="pdf-header hidden print:block mb-6">
@@ -283,14 +287,18 @@ export default function ReportsMonthly() {
               <thead className="text-left text-xs text-muted-foreground">
                 <tr className="border-b">
                   <th className="py-3 pr-4">Staff</th>
-                  <th className="py-3 pr-4">CL Remaining</th>
-                  <th className="py-3 pr-4">OFF Remaining</th>
+                  {showBalanceColumns ? (
+                    <>
+                      <th className="py-3 pr-4">CL Remaining</th>
+                      <th className="py-3 pr-4">OFF Remaining</th>
+                    </>
+                  ) : null}
                 </tr>
               </thead>
               <tbody>
                 {rows.length === 0 ? (
                   <tr>
-                    <td colSpan={3} className="py-10 text-center text-muted-foreground">
+                    <td colSpan={showBalanceColumns ? 3 : 1} className="py-10 text-center text-muted-foreground">
                       No data.
                     </td>
                   </tr>
@@ -298,7 +306,7 @@ export default function ReportsMonthly() {
                 {rows.map((r) => {
                   const active = r.staffId === selectedStaffId;
                   return (
-                    <tr key={r.staffId} className={"border-b last:border-b-0 " + (active ? "bg-accent/30" : "")}> 
+                    <tr key={r.staffId} className={"border-b last:border-b-0 " + (active ? "bg-accent/30" : "")}>
                       <td className="py-3 pr-4 font-medium">
                         <button
                           type="button"
@@ -308,8 +316,12 @@ export default function ReportsMonthly() {
                           {r.name}
                         </button>
                       </td>
-                      <td className="py-3 pr-4 tabular-nums">{r.clRemaining}</td>
-                      <td className="py-3 pr-4 tabular-nums">{r.offBalance}</td>
+                      {showBalanceColumns ? (
+                        <>
+                          <td className="py-3 pr-4 tabular-nums">{r.clRemaining}</td>
+                          <td className="py-3 pr-4 tabular-nums">{r.offBalance}</td>
+                        </>
+                      ) : null}
                     </tr>
                   );
                 })}

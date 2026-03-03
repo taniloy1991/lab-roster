@@ -13,7 +13,7 @@ type HeaderBranding = {
 async function fetchInstitutionHeader(activeInstitutionId: string | null): Promise<HeaderBranding> {
   const fallbackLogo = "/images/birdem-logo.png";
   const fallbackLine1 = "Department of Microbiology";
-  const fallbackLine2 = "BIRDEM GENERAL HOSPITAL";
+  const fallbackLine2 = "BIRDEM General Hospital";
 
   if (!activeInstitutionId) {
     return { logo: fallbackLogo, line1: fallbackLine1, line2: fallbackLine2 };
@@ -24,6 +24,8 @@ async function fetchInstitutionHeader(activeInstitutionId: string | null): Promi
     "pdf_logo_url",
     `pdf_header_line_1:${activeInstitutionId}`,
     "pdf_header_line_1",
+    `pdf_header_line_2:${activeInstitutionId}`,
+    "pdf_header_line_2",
   ];
 
   const [settingsRes, institutionRes] = await Promise.all([
@@ -45,12 +47,12 @@ async function fetchInstitutionHeader(activeInstitutionId: string | null): Promi
     return byKey.get(specific) ?? byKey.get(fallback) ?? defaultValue;
   };
 
-  const line2 = (institutionRes.data?.name ?? "").trim().toUpperCase() || fallbackLine2;
+  const institutionLine2 = (institutionRes.data?.name ?? "").trim().toUpperCase() || fallbackLine2;
 
   return {
     logo: pick(`pdf_logo_url:${activeInstitutionId}`, "pdf_logo_url", fallbackLogo),
     line1: pick(`pdf_header_line_1:${activeInstitutionId}`, "pdf_header_line_1", fallbackLine1),
-    line2,
+    line2: pick(`pdf_header_line_2:${activeInstitutionId}`, "pdf_header_line_2", institutionLine2),
   };
 }
 
