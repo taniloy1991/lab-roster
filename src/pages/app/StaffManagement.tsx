@@ -140,14 +140,48 @@ export default function StaffManagement() {
       return;
     }
 
+    const dobInput = dob.trim();
+    const joiningInput = joiningDate.trim();
+
+    const dobRes = dateDisplaySchema.safeParse(dobInput);
+    if (!dobRes.success) {
+      setError(dobRes.error.issues[0]?.message ?? "Invalid DOB");
+      return;
+    }
+
+    const joiningRes = dateDisplaySchema.safeParse(joiningInput);
+    if (!joiningRes.success) {
+      setError(joiningRes.error.issues[0]?.message ?? "Invalid joining date");
+      return;
+    }
+
+    const parsedDob = dobInput ? displayDateToIso(dobInput) : null;
+    if (dobInput && !parsedDob) {
+      setError("DOB is invalid. Use a real date in dd/mm/yyyy format.");
+      return;
+    }
+
+    const parsedJoiningDate = joiningInput ? displayDateToIso(joiningInput) : null;
+    if (joiningInput && !parsedJoiningDate) {
+      setError("Date of joining is invalid. Use a real date in dd/mm/yyyy format.");
+      return;
+    }
+
     setLoading(true);
-    const res = await supabase.from("staff").insert({
+    const payload: Record<string, unknown> = {
       institution_id: activeInstitutionId,
       name: trimmedName,
       staff_code: sc || null,
       designation: designation.trim() || null,
       phone: phone.trim() || null,
-    });
+    };
+
+    if (canUseBirdemAsifEnhancements) {
+      payload.dob = parsedDob;
+      payload.joining_date = parsedJoiningDate;
+    }
+
+    const res = await supabase.from("staff").insert(payload as never);
 
     setLoading(false);
     if (res.error) {
