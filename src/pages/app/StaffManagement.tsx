@@ -294,6 +294,15 @@ export default function StaffManagement() {
   const openStatement = async (s: StaffRow) => {
     setStatementStaff(s);
     setStatementOpen(true);
+
+    if (canUseBirdemAsifEnhancements) {
+      setStatementHistory([]);
+      setStatementClRemaining(0);
+      setStatementOffBalance(0);
+      setStatementLoading(false);
+      return;
+    }
+
     setStatementLoading(true);
 
     const [clRes, offRes, histRes] = await Promise.all([
