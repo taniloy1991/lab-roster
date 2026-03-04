@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { format } from "date-fns";
+import { addYears, differenceInCalendarDays, format, intervalToDuration, isValid, parse } from "date-fns";
 import { z } from "zod";
 import { useNavigate } from "react-router-dom";
 
@@ -24,6 +24,8 @@ type StaffRow = {
   name: string;
   designation: string | null;
   phone: string | null;
+  dob: string | null;
+  joining_date: string | null;
 };
 
 type LeaveHistoryRow = { date: string | null; type: string | null };
@@ -32,11 +34,21 @@ type ClBalanceRow = { remaining_days: number | null };
 
 type OffBalanceRow = { off_balance: number | null };
 
+const BIRDEM_INSTITUTION_ID = "cfa40334-46e7-431d-9f77-3f3aa1a6b339";
+const ASIF_USER_ID = "f6b0964c-ce2e-457f-9aa7-0fe164d69454";
+
 const staffCodeSchema = z
   .string()
   .trim()
   .max(32, { message: "Staff code must be 32 characters or less" })
   .regex(/^[A-Za-z0-9_-]*$/, { message: "Staff code can only use letters, numbers, _ or -" });
+
+const dateDisplaySchema = z
+  .string()
+  .trim()
+  .refine((value) => value.length === 0 || /^\d{2}\/\d{2}\/\d{4}$/.test(value), {
+    message: "Use dd/mm/yyyy format",
+  });
 
 function friendlyStaffError(message: string) {
   const m = message.toLowerCase();
@@ -44,6 +56,20 @@ function friendlyStaffError(message: string) {
     return "Staff code already exists in this institution.";
   }
   return message;
+}
+
+function formatIsoToDisplay(isoDate: string | null) {
+  if (!isoDate) return "";
+  const parsed = new Date(isoDate);
+  if (Number.isNaN(parsed.getTime())) return "";
+  return format(parsed, "dd/MM/yyyy");
+}
+
+function displayDateToIso(value: string) {
+  const parsed = parse(value, "dd/MM/yyyy", new Date());
+  if (!isValid(parsed)) return null;
+  if (format(parsed, "dd/MM/yyyy") !== value) return null;
+  return format(parsed, "yyyy-MM-dd");
 }
 
 export default function StaffManagement() {
