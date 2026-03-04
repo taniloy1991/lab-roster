@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { format } from "date-fns";
+import { addYears, differenceInCalendarDays, format, intervalToDuration, isValid, parse } from "date-fns";
 import { z } from "zod";
 import { useNavigate } from "react-router-dom";
 
@@ -24,6 +24,8 @@ type StaffRow = {
   name: string;
   designation: string | null;
   phone: string | null;
+  dob: string | null;
+  joining_date: string | null;
 };
 
 type LeaveHistoryRow = { date: string | null; type: string | null };
@@ -32,11 +34,21 @@ type ClBalanceRow = { remaining_days: number | null };
 
 type OffBalanceRow = { off_balance: number | null };
 
+const BIRDEM_INSTITUTION_ID = "cfa40334-46e7-431d-9f77-3f3aa1a6b339";
+const ASIF_USER_ID = "f6b0964c-ce2e-457f-9aa7-0fe164d69454";
+
 const staffCodeSchema = z
   .string()
   .trim()
   .max(32, { message: "Staff code must be 32 characters or less" })
   .regex(/^[A-Za-z0-9_-]*$/, { message: "Staff code can only use letters, numbers, _ or -" });
+
+const dateDisplaySchema = z
+  .string()
+  .trim()
+  .refine((value) => value.length === 0 || /^\d{2}\/\d{2}\/\d{4}$/.test(value), {
+    message: "Use dd/mm/yyyy format",
+  });
 
 function friendlyStaffError(message: string) {
   const m = message.toLowerCase();
@@ -46,16 +58,37 @@ function friendlyStaffError(message: string) {
   return message;
 }
 
+function formatIsoToDisplay(isoDate: string | null) {
+  if (!isoDate) return "";
+  const parsed = new Date(isoDate);
+  if (Number.isNaN(parsed.getTime())) return "";
+  return format(parsed, "dd/MM/yyyy");
+}
+
+function displayDateToIso(value: string) {
+  const parsed = parse(value, "dd/MM/yyyy", new Date());
+  if (!isValid(parsed)) return null;
+  if (format(parsed, "dd/MM/yyyy") !== value) return null;
+  return format(parsed, "yyyy-MM-dd");
+}
+
 export default function StaffManagement() {
   const nav = useNavigate();
-  const { activeInstitutionId } = useAuth();
+  const { activeInstitutionId, institutionRoles, session } = useAuth();
   const [loading, setLoading] = useState(false);
   const [list, setList] = useState<StaffRow[]>([]);
+
+  const canUseBirdemAsifEnhancements =
+    activeInstitutionId === BIRDEM_INSTITUTION_ID &&
+    session?.user?.id === ASIF_USER_ID &&
+    institutionRoles.includes("lab_incharge");
 
   const [name, setName] = useState("");
   const [staffCode, setStaffCode] = useState("");
   const [designation, setDesignation] = useState("");
   const [phone, setPhone] = useState("");
+  const [dob, setDob] = useState("");
+  const [joiningDate, setJoiningDate] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   const [editOpen, setEditOpen] = useState(false);
@@ -64,6 +97,8 @@ export default function StaffManagement() {
   const [editStaffCode, setEditStaffCode] = useState("");
   const [editDesignation, setEditDesignation] = useState("");
   const [editPhone, setEditPhone] = useState("");
+  const [editDob, setEditDob] = useState("");
+  const [editJoiningDate, setEditJoiningDate] = useState("");
 
   // Leave statement dialog
   const [statementOpen, setStatementOpen] = useState(false);
@@ -77,7 +112,7 @@ export default function StaffManagement() {
     if (!activeInstitutionId) return;
     const res = await supabase
       .from("staff")
-      .select("id,staff_code,name,designation,phone")
+      .select("id,staff_code,name,designation,phone,dob,joining_date")
       .eq("institution_id", activeInstitutionId)
       .order("name");
     setList((res.data ?? []) as StaffRow[]);
@@ -105,14 +140,48 @@ export default function StaffManagement() {
       return;
     }
 
+    const dobInput = dob.trim();
+    const joiningInput = joiningDate.trim();
+
+    const dobRes = dateDisplaySchema.safeParse(dobInput);
+    if (!dobRes.success) {
+      setError(dobRes.error.issues[0]?.message ?? "Invalid DOB");
+      return;
+    }
+
+    const joiningRes = dateDisplaySchema.safeParse(joiningInput);
+    if (!joiningRes.success) {
+      setError(joiningRes.error.issues[0]?.message ?? "Invalid joining date");
+      return;
+    }
+
+    const parsedDob = dobInput ? displayDateToIso(dobInput) : null;
+    if (dobInput && !parsedDob) {
+      setError("DOB is invalid. Use a real date in dd/mm/yyyy format.");
+      return;
+    }
+
+    const parsedJoiningDate = joiningInput ? displayDateToIso(joiningInput) : null;
+    if (joiningInput && !parsedJoiningDate) {
+      setError("Date of joining is invalid. Use a real date in dd/mm/yyyy format.");
+      return;
+    }
+
     setLoading(true);
-    const res = await supabase.from("staff").insert({
+    const payload: Record<string, unknown> = {
       institution_id: activeInstitutionId,
       name: trimmedName,
       staff_code: sc || null,
       designation: designation.trim() || null,
       phone: phone.trim() || null,
-    });
+    };
+
+    if (canUseBirdemAsifEnhancements) {
+      payload.dob = parsedDob;
+      payload.joining_date = parsedJoiningDate;
+    }
+
+    const res = await supabase.from("staff").insert(payload as any);
 
     setLoading(false);
     if (res.error) {
@@ -124,6 +193,8 @@ export default function StaffManagement() {
     setStaffCode("");
     setDesignation("");
     setPhone("");
+    setDob("");
+    setJoiningDate("");
     void load();
   };
 
@@ -134,6 +205,8 @@ export default function StaffManagement() {
     setEditStaffCode(s.staff_code ?? "");
     setEditDesignation(s.designation ?? "");
     setEditPhone(s.phone ?? "");
+    setEditDob(formatIsoToDisplay(s.dob));
+    setEditJoiningDate(formatIsoToDisplay(s.joining_date));
     setEditOpen(true);
   };
 
@@ -154,15 +227,49 @@ export default function StaffManagement() {
       return;
     }
 
+    const dobInput = editDob.trim();
+    const joiningInput = editJoiningDate.trim();
+
+    const dobRes = dateDisplaySchema.safeParse(dobInput);
+    if (!dobRes.success) {
+      setError(dobRes.error.issues[0]?.message ?? "Invalid DOB");
+      return;
+    }
+
+    const joiningRes = dateDisplaySchema.safeParse(joiningInput);
+    if (!joiningRes.success) {
+      setError(joiningRes.error.issues[0]?.message ?? "Invalid joining date");
+      return;
+    }
+
+    const parsedDob = dobInput ? displayDateToIso(dobInput) : null;
+    if (dobInput && !parsedDob) {
+      setError("DOB is invalid. Use a real date in dd/mm/yyyy format.");
+      return;
+    }
+
+    const parsedJoiningDate = joiningInput ? displayDateToIso(joiningInput) : null;
+    if (joiningInput && !parsedJoiningDate) {
+      setError("Date of joining is invalid. Use a real date in dd/mm/yyyy format.");
+      return;
+    }
+
     setLoading(true);
+    const payload: Record<string, unknown> = {
+      name: trimmedName,
+      staff_code: sc || null,
+      designation: editDesignation.trim() || null,
+      phone: editPhone.trim() || null,
+    };
+
+    if (canUseBirdemAsifEnhancements) {
+      payload.dob = parsedDob;
+      payload.joining_date = parsedJoiningDate;
+    }
+
     const res = await supabase
       .from("staff")
-      .update({
-        name: trimmedName,
-        staff_code: sc || null,
-        designation: editDesignation.trim() || null,
-        phone: editPhone.trim() || null,
-      })
+      .update(payload as any)
       .eq("id", editTarget.id)
       .eq("institution_id", activeInstitutionId);
 
@@ -187,6 +294,15 @@ export default function StaffManagement() {
   const openStatement = async (s: StaffRow) => {
     setStatementStaff(s);
     setStatementOpen(true);
+
+    if (canUseBirdemAsifEnhancements) {
+      setStatementHistory([]);
+      setStatementClRemaining(0);
+      setStatementOffBalance(0);
+      setStatementLoading(false);
+      return;
+    }
+
     setStatementLoading(true);
 
     const [clRes, offRes, histRes] = await Promise.all([
@@ -203,6 +319,38 @@ export default function StaffManagement() {
 
   const subtitle = useMemo(() => format(new Date(), "dd MMM yyyy"), []);
 
+  const statementServiceInfo = useMemo(() => {
+    if (!statementStaff?.joining_date) return null;
+    const joining = new Date(statementStaff.joining_date);
+    const now = new Date();
+    if (Number.isNaN(joining.getTime()) || joining > now) return null;
+
+    const totalDays = differenceInCalendarDays(now, joining) + 1;
+    const duration = intervalToDuration({ start: joining, end: now });
+
+    return {
+      totalDays,
+      years: duration.years ?? 0,
+      months: duration.months ?? 0,
+      days: duration.days ?? 0,
+      fullYears: Math.max(0, differenceInCalendarDays(now, joining) >= 0 ? (duration.years ?? 0) : 0),
+    };
+  }, [statementStaff]);
+
+  const statementPrlDate = useMemo(() => {
+    if (!statementStaff?.dob) return null;
+    const birthDate = new Date(statementStaff.dob);
+    if (Number.isNaN(birthDate.getTime())) return null;
+    return addYears(birthDate, 59);
+  }, [statementStaff]);
+
+  const statementElBalance = useMemo(() => {
+    const fullYears = statementServiceInfo?.fullYears ?? 0;
+    const earned = fullYears * 33;
+    const recreationDeduction = Math.floor(fullYears / 3) * 15;
+    return Math.max(0, earned - recreationDeduction);
+  }, [statementServiceInfo]);
+
   return (
     <div className="space-y-6">
       <header className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
@@ -217,7 +365,7 @@ export default function StaffManagement() {
           <CardTitle className="text-lg">Add staff</CardTitle>
           <CardDescription>Name, staff code, phone and designation.</CardDescription>
         </CardHeader>
-        <CardContent className="grid gap-3 md:grid-cols-5">
+        <CardContent className={`grid gap-3 ${canUseBirdemAsifEnhancements ? "md:grid-cols-7" : "md:grid-cols-5"}`}>
           <div className="space-y-2">
             <Label htmlFor="name">Name</Label>
             <Input id="name" value={name} onChange={(e) => setName(e.target.value)} />
@@ -241,13 +389,39 @@ export default function StaffManagement() {
             <Label htmlFor="phone">Phone</Label>
             <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
           </div>
+
+          {canUseBirdemAsifEnhancements ? (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="dob">DOB (dd/mm/yyyy)</Label>
+                <Input
+                  id="dob"
+                  value={dob}
+                  onChange={(e) => setDob(e.target.value)}
+                  placeholder="dd/mm/yyyy"
+                  inputMode="numeric"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="joining_date">Date of Joining (dd/mm/yyyy)</Label>
+                <Input
+                  id="joining_date"
+                  value={joiningDate}
+                  onChange={(e) => setJoiningDate(e.target.value)}
+                  placeholder="dd/mm/yyyy"
+                  inputMode="numeric"
+                />
+              </div>
+            </>
+          ) : null}
+
           <div className="flex items-end">
             <Button onClick={add} disabled={loading} className="w-full">
               {loading ? "Working…" : "Add"}
             </Button>
           </div>
 
-          {error ? <p className="md:col-span-5 text-sm text-destructive">{error}</p> : null}
+          {error ? <p className={`text-sm text-destructive ${canUseBirdemAsifEnhancements ? "md:col-span-7" : "md:col-span-5"}`}>{error}</p> : null}
         </CardContent>
       </Card>
 
@@ -319,7 +493,7 @@ export default function StaffManagement() {
             <DialogDescription>Update staff details including staff code.</DialogDescription>
           </DialogHeader>
 
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className={`grid gap-3 ${canUseBirdemAsifEnhancements ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
             <div className="space-y-2">
               <Label htmlFor="edit_name">Name</Label>
               <Input id="edit_name" value={editName} onChange={(e) => setEditName(e.target.value)} />
@@ -343,6 +517,30 @@ export default function StaffManagement() {
               <Label htmlFor="edit_phone">Phone</Label>
               <Input id="edit_phone" value={editPhone} onChange={(e) => setEditPhone(e.target.value)} />
             </div>
+            {canUseBirdemAsifEnhancements ? (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="edit_dob">DOB (dd/mm/yyyy)</Label>
+                  <Input
+                    id="edit_dob"
+                    value={editDob}
+                    onChange={(e) => setEditDob(e.target.value)}
+                    placeholder="dd/mm/yyyy"
+                    inputMode="numeric"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit_joining_date">Date of Joining (dd/mm/yyyy)</Label>
+                  <Input
+                    id="edit_joining_date"
+                    value={editJoiningDate}
+                    onChange={(e) => setEditJoiningDate(e.target.value)}
+                    placeholder="dd/mm/yyyy"
+                    inputMode="numeric"
+                  />
+                </div>
+              </>
+            ) : null}
           </div>
 
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
@@ -369,47 +567,75 @@ export default function StaffManagement() {
           </DialogHeader>
 
           {statementStaff ? (
-            <div className="space-y-4">
-              <div className="grid gap-2 sm:grid-cols-2">
-                <div className="rounded-md border border-input bg-background p-3">
-                  <div className="text-xs text-muted-foreground">CL remaining</div>
-                  <div className="text-xl font-semibold tabular-nums">{statementClRemaining}</div>
+            canUseBirdemAsifEnhancements ? (
+              <div className="space-y-4">
+                <div className="grid gap-2 sm:grid-cols-3">
+                  <div className="rounded-md border border-input bg-background p-3">
+                    <div className="text-xs text-muted-foreground">Total service</div>
+                    <div className="text-base font-semibold tabular-nums">
+                      {statementServiceInfo
+                        ? `${statementServiceInfo.totalDays} days (${statementServiceInfo.years}y ${statementServiceInfo.months}m ${statementServiceInfo.days}d)`
+                        : "—"}
+                    </div>
+                  </div>
+                  <div className="rounded-md border border-input bg-background p-3">
+                    <div className="text-xs text-muted-foreground">PRL Date</div>
+                    <div className="text-base font-semibold tabular-nums">
+                      {statementPrlDate ? format(statementPrlDate, "dd/MM/yyyy") : "—"}
+                    </div>
+                  </div>
+                  <div className="rounded-md border border-input bg-background p-3">
+                    <div className="text-xs text-muted-foreground">Total EL balance</div>
+                    <div className="text-base font-semibold tabular-nums">{statementElBalance}</div>
+                  </div>
                 </div>
-                <div className="rounded-md border border-input bg-background p-3">
-                  <div className="text-xs text-muted-foreground">OFF balance</div>
-                  <div className="text-xl font-semibold tabular-nums">{statementOffBalance}</div>
-                </div>
+                <p className="text-xs text-muted-foreground">
+                  EL formula: (full service years × 33) − (every completed 3 years × 15).
+                </p>
               </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <div className="rounded-md border border-input bg-background p-3">
+                    <div className="text-xs text-muted-foreground">CL remaining</div>
+                    <div className="text-xl font-semibold tabular-nums">{statementClRemaining}</div>
+                  </div>
+                  <div className="rounded-md border border-input bg-background p-3">
+                    <div className="text-xs text-muted-foreground">OFF balance</div>
+                    <div className="text-xl font-semibold tabular-nums">{statementOffBalance}</div>
+                  </div>
+                </div>
 
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[520px] text-sm">
-                  <thead className="text-left text-xs text-muted-foreground">
-                    <tr className="border-b">
-                      <th className="py-3 pr-4">Date</th>
-                      <th className="py-3 pr-4">Type</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {statementLoading ? (
-                      <tr>
-                        <td colSpan={2} className="py-10 text-center text-muted-foreground">Loading…</td>
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[520px] text-sm">
+                    <thead className="text-left text-xs text-muted-foreground">
+                      <tr className="border-b">
+                        <th className="py-3 pr-4">Date</th>
+                        <th className="py-3 pr-4">Type</th>
                       </tr>
-                    ) : statementHistory.length === 0 ? (
-                      <tr>
-                        <td colSpan={2} className="py-10 text-center text-muted-foreground">No leave history.</td>
-                      </tr>
-                    ) : (
-                      statementHistory.map((r, idx) => (
-                        <tr key={`${r.date}-${idx}`} className="border-b last:border-b-0">
-                          <td className="py-3 pr-4 tabular-nums">{r.date ?? "—"}</td>
-                          <td className="py-3 pr-4">{r.type ?? "—"}</td>
+                    </thead>
+                    <tbody>
+                      {statementLoading ? (
+                        <tr>
+                          <td colSpan={2} className="py-10 text-center text-muted-foreground">Loading…</td>
                         </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
+                      ) : statementHistory.length === 0 ? (
+                        <tr>
+                          <td colSpan={2} className="py-10 text-center text-muted-foreground">No leave history.</td>
+                        </tr>
+                      ) : (
+                        statementHistory.map((r, idx) => (
+                          <tr key={`${r.date}-${idx}`} className="border-b last:border-b-0">
+                            <td className="py-3 pr-4 tabular-nums">{r.date ?? "—"}</td>
+                            <td className="py-3 pr-4">{r.type ?? "—"}</td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            </div>
+            )
           ) : null}
 
           <DialogFooter>
