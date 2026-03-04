@@ -365,7 +365,7 @@ export default function StaffManagement() {
           <CardTitle className="text-lg">Add staff</CardTitle>
           <CardDescription>Name, staff code, phone and designation.</CardDescription>
         </CardHeader>
-        <CardContent className="grid gap-3 md:grid-cols-5">
+        <CardContent className={`grid gap-3 ${canUseBirdemAsifEnhancements ? "md:grid-cols-7" : "md:grid-cols-5"}`}>
           <div className="space-y-2">
             <Label htmlFor="name">Name</Label>
             <Input id="name" value={name} onChange={(e) => setName(e.target.value)} />
@@ -389,13 +389,39 @@ export default function StaffManagement() {
             <Label htmlFor="phone">Phone</Label>
             <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
           </div>
+
+          {canUseBirdemAsifEnhancements ? (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="dob">DOB (dd/mm/yyyy)</Label>
+                <Input
+                  id="dob"
+                  value={dob}
+                  onChange={(e) => setDob(e.target.value)}
+                  placeholder="dd/mm/yyyy"
+                  inputMode="numeric"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="joining_date">Date of Joining (dd/mm/yyyy)</Label>
+                <Input
+                  id="joining_date"
+                  value={joiningDate}
+                  onChange={(e) => setJoiningDate(e.target.value)}
+                  placeholder="dd/mm/yyyy"
+                  inputMode="numeric"
+                />
+              </div>
+            </>
+          ) : null}
+
           <div className="flex items-end">
             <Button onClick={add} disabled={loading} className="w-full">
               {loading ? "Working…" : "Add"}
             </Button>
           </div>
 
-          {error ? <p className="md:col-span-5 text-sm text-destructive">{error}</p> : null}
+          {error ? <p className={`text-sm text-destructive ${canUseBirdemAsifEnhancements ? "md:col-span-7" : "md:col-span-5"}`}>{error}</p> : null}
         </CardContent>
       </Card>
 
