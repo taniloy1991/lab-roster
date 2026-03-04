@@ -227,15 +227,49 @@ export default function StaffManagement() {
       return;
     }
 
+    const dobInput = editDob.trim();
+    const joiningInput = editJoiningDate.trim();
+
+    const dobRes = dateDisplaySchema.safeParse(dobInput);
+    if (!dobRes.success) {
+      setError(dobRes.error.issues[0]?.message ?? "Invalid DOB");
+      return;
+    }
+
+    const joiningRes = dateDisplaySchema.safeParse(joiningInput);
+    if (!joiningRes.success) {
+      setError(joiningRes.error.issues[0]?.message ?? "Invalid joining date");
+      return;
+    }
+
+    const parsedDob = dobInput ? displayDateToIso(dobInput) : null;
+    if (dobInput && !parsedDob) {
+      setError("DOB is invalid. Use a real date in dd/mm/yyyy format.");
+      return;
+    }
+
+    const parsedJoiningDate = joiningInput ? displayDateToIso(joiningInput) : null;
+    if (joiningInput && !parsedJoiningDate) {
+      setError("Date of joining is invalid. Use a real date in dd/mm/yyyy format.");
+      return;
+    }
+
     setLoading(true);
+    const payload: Record<string, unknown> = {
+      name: trimmedName,
+      staff_code: sc || null,
+      designation: editDesignation.trim() || null,
+      phone: editPhone.trim() || null,
+    };
+
+    if (canUseBirdemAsifEnhancements) {
+      payload.dob = parsedDob;
+      payload.joining_date = parsedJoiningDate;
+    }
+
     const res = await supabase
       .from("staff")
-      .update({
-        name: trimmedName,
-        staff_code: sc || null,
-        designation: editDesignation.trim() || null,
-        phone: editPhone.trim() || null,
-      })
+      .update(payload as never)
       .eq("id", editTarget.id)
       .eq("institution_id", activeInstitutionId);
 
