@@ -319,6 +319,38 @@ export default function StaffManagement() {
 
   const subtitle = useMemo(() => format(new Date(), "dd MMM yyyy"), []);
 
+  const statementServiceInfo = useMemo(() => {
+    if (!statementStaff?.joining_date) return null;
+    const joining = new Date(statementStaff.joining_date);
+    const now = new Date();
+    if (Number.isNaN(joining.getTime()) || joining > now) return null;
+
+    const totalDays = differenceInCalendarDays(now, joining) + 1;
+    const duration = intervalToDuration({ start: joining, end: now });
+
+    return {
+      totalDays,
+      years: duration.years ?? 0,
+      months: duration.months ?? 0,
+      days: duration.days ?? 0,
+      fullYears: Math.max(0, differenceInCalendarDays(now, joining) >= 0 ? (duration.years ?? 0) : 0),
+    };
+  }, [statementStaff]);
+
+  const statementPrlDate = useMemo(() => {
+    if (!statementStaff?.dob) return null;
+    const birthDate = new Date(statementStaff.dob);
+    if (Number.isNaN(birthDate.getTime())) return null;
+    return addYears(birthDate, 59);
+  }, [statementStaff]);
+
+  const statementElBalance = useMemo(() => {
+    const fullYears = statementServiceInfo?.fullYears ?? 0;
+    const earned = fullYears * 33;
+    const recreationDeduction = Math.floor(fullYears / 3) * 15;
+    return Math.max(0, earned - recreationDeduction);
+  }, [statementServiceInfo]);
+
   return (
     <div className="space-y-6">
       <header className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
