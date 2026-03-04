@@ -181,7 +181,7 @@ export default function StaffManagement() {
       payload.joining_date = parsedJoiningDate;
     }
 
-    const res = await supabase.from("staff").insert(payload as never);
+    const res = await supabase.from("staff").insert(payload as any);
 
     setLoading(false);
     if (res.error) {
