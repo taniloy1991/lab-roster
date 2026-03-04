@@ -193,6 +193,8 @@ export default function StaffManagement() {
     setStaffCode("");
     setDesignation("");
     setPhone("");
+    setDob("");
+    setJoiningDate("");
     void load();
   };
 
