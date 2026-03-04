@@ -269,7 +269,7 @@ export default function StaffManagement() {
 
     const res = await supabase
       .from("staff")
-      .update(payload as never)
+      .update(payload as any)
       .eq("id", editTarget.id)
       .eq("institution_id", activeInstitutionId);
 
