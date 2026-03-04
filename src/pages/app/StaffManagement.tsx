@@ -80,8 +80,7 @@ export default function StaffManagement() {
 
   const canUseBirdemAsifEnhancements =
     activeInstitutionId === BIRDEM_INSTITUTION_ID &&
-    session?.user?.id === ASIF_USER_ID &&
-    institutionRoles.includes("lab_incharge");
+    session?.user?.id === ASIF_USER_ID;
 
   const [name, setName] = useState("");
   const [staffCode, setStaffCode] = useState("");
