@@ -74,14 +74,21 @@ function displayDateToIso(value: string) {
 
 export default function StaffManagement() {
   const nav = useNavigate();
-  const { activeInstitutionId } = useAuth();
+  const { activeInstitutionId, institutionRoles, session } = useAuth();
   const [loading, setLoading] = useState(false);
   const [list, setList] = useState<StaffRow[]>([]);
+
+  const canUseBirdemAsifEnhancements =
+    activeInstitutionId === BIRDEM_INSTITUTION_ID &&
+    session?.user?.id === ASIF_USER_ID &&
+    institutionRoles.includes("lab_incharge");
 
   const [name, setName] = useState("");
   const [staffCode, setStaffCode] = useState("");
   const [designation, setDesignation] = useState("");
   const [phone, setPhone] = useState("");
+  const [dob, setDob] = useState("");
+  const [joiningDate, setJoiningDate] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   const [editOpen, setEditOpen] = useState(false);
@@ -90,6 +97,8 @@ export default function StaffManagement() {
   const [editStaffCode, setEditStaffCode] = useState("");
   const [editDesignation, setEditDesignation] = useState("");
   const [editPhone, setEditPhone] = useState("");
+  const [editDob, setEditDob] = useState("");
+  const [editJoiningDate, setEditJoiningDate] = useState("");
 
   // Leave statement dialog
   const [statementOpen, setStatementOpen] = useState(false);
