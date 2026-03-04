@@ -567,47 +567,75 @@ export default function StaffManagement() {
           </DialogHeader>
 
           {statementStaff ? (
-            <div className="space-y-4">
-              <div className="grid gap-2 sm:grid-cols-2">
-                <div className="rounded-md border border-input bg-background p-3">
-                  <div className="text-xs text-muted-foreground">CL remaining</div>
-                  <div className="text-xl font-semibold tabular-nums">{statementClRemaining}</div>
+            canUseBirdemAsifEnhancements ? (
+              <div className="space-y-4">
+                <div className="grid gap-2 sm:grid-cols-3">
+                  <div className="rounded-md border border-input bg-background p-3">
+                    <div className="text-xs text-muted-foreground">Total service</div>
+                    <div className="text-base font-semibold tabular-nums">
+                      {statementServiceInfo
+                        ? `${statementServiceInfo.totalDays} days (${statementServiceInfo.years}y ${statementServiceInfo.months}m ${statementServiceInfo.days}d)`
+                        : "—"}
+                    </div>
+                  </div>
+                  <div className="rounded-md border border-input bg-background p-3">
+                    <div className="text-xs text-muted-foreground">PRL Date</div>
+                    <div className="text-base font-semibold tabular-nums">
+                      {statementPrlDate ? format(statementPrlDate, "dd/MM/yyyy") : "—"}
+                    </div>
+                  </div>
+                  <div className="rounded-md border border-input bg-background p-3">
+                    <div className="text-xs text-muted-foreground">Total EL balance</div>
+                    <div className="text-base font-semibold tabular-nums">{statementElBalance}</div>
+                  </div>
                 </div>
-                <div className="rounded-md border border-input bg-background p-3">
-                  <div className="text-xs text-muted-foreground">OFF balance</div>
-                  <div className="text-xl font-semibold tabular-nums">{statementOffBalance}</div>
-                </div>
+                <p className="text-xs text-muted-foreground">
+                  EL formula: (full service years × 33) − (every completed 3 years × 15).
+                </p>
               </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <div className="rounded-md border border-input bg-background p-3">
+                    <div className="text-xs text-muted-foreground">CL remaining</div>
+                    <div className="text-xl font-semibold tabular-nums">{statementClRemaining}</div>
+                  </div>
+                  <div className="rounded-md border border-input bg-background p-3">
+                    <div className="text-xs text-muted-foreground">OFF balance</div>
+                    <div className="text-xl font-semibold tabular-nums">{statementOffBalance}</div>
+                  </div>
+                </div>
 
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[520px] text-sm">
-                  <thead className="text-left text-xs text-muted-foreground">
-                    <tr className="border-b">
-                      <th className="py-3 pr-4">Date</th>
-                      <th className="py-3 pr-4">Type</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {statementLoading ? (
-                      <tr>
-                        <td colSpan={2} className="py-10 text-center text-muted-foreground">Loading…</td>
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[520px] text-sm">
+                    <thead className="text-left text-xs text-muted-foreground">
+                      <tr className="border-b">
+                        <th className="py-3 pr-4">Date</th>
+                        <th className="py-3 pr-4">Type</th>
                       </tr>
-                    ) : statementHistory.length === 0 ? (
-                      <tr>
-                        <td colSpan={2} className="py-10 text-center text-muted-foreground">No leave history.</td>
-                      </tr>
-                    ) : (
-                      statementHistory.map((r, idx) => (
-                        <tr key={`${r.date}-${idx}`} className="border-b last:border-b-0">
-                          <td className="py-3 pr-4 tabular-nums">{r.date ?? "—"}</td>
-                          <td className="py-3 pr-4">{r.type ?? "—"}</td>
+                    </thead>
+                    <tbody>
+                      {statementLoading ? (
+                        <tr>
+                          <td colSpan={2} className="py-10 text-center text-muted-foreground">Loading…</td>
                         </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
+                      ) : statementHistory.length === 0 ? (
+                        <tr>
+                          <td colSpan={2} className="py-10 text-center text-muted-foreground">No leave history.</td>
+                        </tr>
+                      ) : (
+                        statementHistory.map((r, idx) => (
+                          <tr key={`${r.date}-${idx}`} className="border-b last:border-b-0">
+                            <td className="py-3 pr-4 tabular-nums">{r.date ?? "—"}</td>
+                            <td className="py-3 pr-4">{r.type ?? "—"}</td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            </div>
+            )
           ) : null}
 
           <DialogFooter>
