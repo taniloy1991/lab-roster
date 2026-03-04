@@ -74,7 +74,7 @@ function displayDateToIso(value: string) {
 
 export default function StaffManagement() {
   const nav = useNavigate();
-  const { activeInstitutionId, institutionRoles, session } = useAuth();
+  const { activeInstitutionId, session } = useAuth();
   const [loading, setLoading] = useState(false);
   const [list, setList] = useState<StaffRow[]>([]);
 
