@@ -112,7 +112,7 @@ export default function StaffManagement() {
     if (!activeInstitutionId) return;
     const res = await supabase
       .from("staff")
-      .select("id,staff_code,name,designation,phone")
+      .select("id,staff_code,name,designation,phone,dob,joining_date")
       .eq("institution_id", activeInstitutionId)
       .order("name");
     setList((res.data ?? []) as StaffRow[]);
