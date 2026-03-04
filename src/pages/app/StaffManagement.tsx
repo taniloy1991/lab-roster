@@ -205,6 +205,8 @@ export default function StaffManagement() {
     setEditStaffCode(s.staff_code ?? "");
     setEditDesignation(s.designation ?? "");
     setEditPhone(s.phone ?? "");
+    setEditDob(formatIsoToDisplay(s.dob));
+    setEditJoiningDate(formatIsoToDisplay(s.joining_date));
     setEditOpen(true);
   };
 
