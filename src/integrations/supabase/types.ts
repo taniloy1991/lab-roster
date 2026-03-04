@@ -1004,9 +1004,11 @@ export type Database = {
         Row: {
           created_at: string
           designation: string | null
+          dob: string | null
           id: string
           institution_id: string
           is_active: boolean
+          joining_date: string | null
           name: string
           phone: string | null
           staff_code: string | null
@@ -1016,9 +1018,11 @@ export type Database = {
         Insert: {
           created_at?: string
           designation?: string | null
+          dob?: string | null
           id?: string
           institution_id: string
           is_active?: boolean
+          joining_date?: string | null
           name: string
           phone?: string | null
           staff_code?: string | null
@@ -1028,9 +1032,11 @@ export type Database = {
         Update: {
           created_at?: string
           designation?: string | null
+          dob?: string | null
           id?: string
           institution_id?: string
           is_active?: boolean
+          joining_date?: string | null
           name?: string
           phone?: string | null
           staff_code?: string | null
