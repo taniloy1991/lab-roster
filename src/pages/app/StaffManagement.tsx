@@ -493,7 +493,7 @@ export default function StaffManagement() {
             <DialogDescription>Update staff details including staff code.</DialogDescription>
           </DialogHeader>
 
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className={`grid gap-3 ${canUseBirdemAsifEnhancements ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
             <div className="space-y-2">
               <Label htmlFor="edit_name">Name</Label>
               <Input id="edit_name" value={editName} onChange={(e) => setEditName(e.target.value)} />
@@ -517,6 +517,30 @@ export default function StaffManagement() {
               <Label htmlFor="edit_phone">Phone</Label>
               <Input id="edit_phone" value={editPhone} onChange={(e) => setEditPhone(e.target.value)} />
             </div>
+            {canUseBirdemAsifEnhancements ? (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="edit_dob">DOB (dd/mm/yyyy)</Label>
+                  <Input
+                    id="edit_dob"
+                    value={editDob}
+                    onChange={(e) => setEditDob(e.target.value)}
+                    placeholder="dd/mm/yyyy"
+                    inputMode="numeric"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit_joining_date">Date of Joining (dd/mm/yyyy)</Label>
+                  <Input
+                    id="edit_joining_date"
+                    value={editJoiningDate}
+                    onChange={(e) => setEditJoiningDate(e.target.value)}
+                    placeholder="dd/mm/yyyy"
+                    inputMode="numeric"
+                  />
+                </div>
+              </>
+            ) : null}
           </div>
 
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
