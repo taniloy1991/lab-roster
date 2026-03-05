@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { addYears, differenceInCalendarDays, format, intervalToDuration, isValid, parse } from "date-fns";
+import { CalendarDays } from "lucide-react";
 import { z } from "zod";
 import { useNavigate } from "react-router-dom";
 
@@ -7,8 +8,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/providers/AuthProvider";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Dialog,
   DialogContent,
@@ -17,6 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
 
 type StaffRow = {
   id: string;
@@ -28,27 +32,11 @@ type StaffRow = {
   joining_date: string | null;
 };
 
-type LeaveHistoryRow = { date: string | null; type: string | null };
-
-type ClBalanceRow = { remaining_days: number | null };
-
-type OffBalanceRow = { off_balance: number | null };
-
-const BIRDEM_INSTITUTION_ID = "cfa40334-46e7-431d-9f77-3f3aa1a6b339";
-const ASIF_USER_ID = "f6b0964c-ce2e-457f-9aa7-0fe164d69454";
-
 const staffCodeSchema = z
   .string()
   .trim()
   .max(32, { message: "Staff code must be 32 characters or less" })
   .regex(/^[A-Za-z0-9_-]*$/, { message: "Staff code can only use letters, numbers, _ or -" });
-
-const dateDisplaySchema = z
-  .string()
-  .trim()
-  .refine((value) => value.length === 0 || /^\d{2}\/\d{2}\/\d{4}$/.test(value), {
-    message: "Use dd/mm/yyyy format",
-  });
 
 function friendlyStaffError(message: string) {
   const m = message.toLowerCase();
