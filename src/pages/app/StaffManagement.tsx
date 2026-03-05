@@ -46,29 +46,68 @@ function friendlyStaffError(message: string) {
   return message;
 }
 
-function formatIsoToDisplay(isoDate: string | null) {
-  if (!isoDate) return "";
-  const parsed = new Date(isoDate);
-  if (Number.isNaN(parsed.getTime())) return "";
-  return format(parsed, "dd/MM/yyyy");
+function parseIsoDate(isoDate: string | null) {
+  if (!isoDate) return undefined;
+  const parsed = parse(isoDate, "yyyy-MM-dd", new Date());
+  return isValid(parsed) ? parsed : undefined;
 }
 
-function displayDateToIso(value: string) {
-  const parsed = parse(value, "dd/MM/yyyy", new Date());
-  if (!isValid(parsed)) return null;
-  if (format(parsed, "dd/MM/yyyy") !== value) return null;
-  return format(parsed, "yyyy-MM-dd");
+function formatIsoToDisplay(isoDate: string | null) {
+  const parsed = parseIsoDate(isoDate);
+  return parsed ? format(parsed, "dd/MM/yyyy") : "";
+}
+
+function SmartDatePicker(props: {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const { id, label, value, onChange } = props;
+  const selected = parseIsoDate(value || null);
+  const currentYear = new Date().getFullYear();
+
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={id}>{label}</Label>
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button
+            id={id}
+            type="button"
+            variant="outline"
+            className={cn("w-full justify-between font-normal", !selected && "text-muted-foreground")}
+          >
+            {selected ? format(selected, "dd/MM/yyyy") : "dd/mm/yyyy"}
+            <CalendarDays className="h-4 w-4" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0" align="start">
+          <Calendar
+            mode="single"
+            selected={selected}
+            onSelect={(date) => onChange(date ? format(date, "yyyy-MM-dd") : "")}
+            defaultMonth={selected ?? new Date()}
+            captionLayout="dropdown-buttons"
+            fromYear={1950}
+            toYear={currentYear + 5}
+            className="p-3 pointer-events-auto"
+            initialFocus
+          />
+          <div className="border-t border-border p-2">
+            <Button type="button" variant="ghost" className="w-full" onClick={() => onChange("")}>Clear date</Button>
+          </div>
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
 }
 
 export default function StaffManagement() {
   const nav = useNavigate();
-  const { activeInstitutionId, session } = useAuth();
+  const { activeInstitutionId } = useAuth();
   const [loading, setLoading] = useState(false);
   const [list, setList] = useState<StaffRow[]>([]);
-
-  const canUseBirdemAsifEnhancements =
-    activeInstitutionId === BIRDEM_INSTITUTION_ID &&
-    session?.user?.id === ASIF_USER_ID;
 
   const [name, setName] = useState("");
   const [staffCode, setStaffCode] = useState("");
@@ -90,9 +129,6 @@ export default function StaffManagement() {
   // Leave statement dialog
   const [statementOpen, setStatementOpen] = useState(false);
   const [statementStaff, setStatementStaff] = useState<StaffRow | null>(null);
-  const [statementLoading, setStatementLoading] = useState(false);
-  const [statementClRemaining, setStatementClRemaining] = useState(0);
-  const [statementOffBalance, setStatementOffBalance] = useState(0);
   const [statementHistory, setStatementHistory] = useState<LeaveHistoryRow[]>([]);
 
   const load = async () => {
