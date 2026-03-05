@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { addYears, differenceInCalendarDays, format, intervalToDuration, isValid, parse } from "date-fns";
+import { CalendarDays } from "lucide-react";
 import { z } from "zod";
 import { useNavigate } from "react-router-dom";
 
@@ -7,8 +8,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/providers/AuthProvider";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Dialog,
   DialogContent,
@@ -17,6 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
 
 type StaffRow = {
   id: string;
@@ -28,27 +32,11 @@ type StaffRow = {
   joining_date: string | null;
 };
 
-type LeaveHistoryRow = { date: string | null; type: string | null };
-
-type ClBalanceRow = { remaining_days: number | null };
-
-type OffBalanceRow = { off_balance: number | null };
-
-const BIRDEM_INSTITUTION_ID = "cfa40334-46e7-431d-9f77-3f3aa1a6b339";
-const ASIF_USER_ID = "f6b0964c-ce2e-457f-9aa7-0fe164d69454";
-
 const staffCodeSchema = z
   .string()
   .trim()
   .max(32, { message: "Staff code must be 32 characters or less" })
   .regex(/^[A-Za-z0-9_-]*$/, { message: "Staff code can only use letters, numbers, _ or -" });
-
-const dateDisplaySchema = z
-  .string()
-  .trim()
-  .refine((value) => value.length === 0 || /^\d{2}\/\d{2}\/\d{4}$/.test(value), {
-    message: "Use dd/mm/yyyy format",
-  });
 
 function friendlyStaffError(message: string) {
   const m = message.toLowerCase();
@@ -58,29 +46,72 @@ function friendlyStaffError(message: string) {
   return message;
 }
 
-function formatIsoToDisplay(isoDate: string | null) {
-  if (!isoDate) return "";
-  const parsed = new Date(isoDate);
-  if (Number.isNaN(parsed.getTime())) return "";
-  return format(parsed, "dd/MM/yyyy");
+function parseIsoDate(isoDate: string | null) {
+  if (!isoDate) return undefined;
+  const parsed = parse(isoDate, "yyyy-MM-dd", new Date());
+  return isValid(parsed) ? parsed : undefined;
 }
 
-function displayDateToIso(value: string) {
-  const parsed = parse(value, "dd/MM/yyyy", new Date());
-  if (!isValid(parsed)) return null;
-  if (format(parsed, "dd/MM/yyyy") !== value) return null;
-  return format(parsed, "yyyy-MM-dd");
+function formatIsoToDisplay(isoDate: string | null) {
+  const parsed = parseIsoDate(isoDate);
+  return parsed ? format(parsed, "dd/MM/yyyy") : "";
+}
+
+function SmartDatePicker(props: {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const { id, label, value, onChange } = props;
+  const selected = parseIsoDate(value || null);
+  const currentYear = new Date().getFullYear();
+
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={id}>{label}</Label>
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button
+            id={id}
+            type="button"
+            variant="outline"
+            className={cn("w-full justify-between font-normal", !selected && "text-muted-foreground")}
+          >
+            {selected ? format(selected, "dd/MM/yyyy") : "dd/mm/yyyy"}
+            <CalendarDays className="h-4 w-4" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0" align="start">
+          <Calendar
+            mode="single"
+            selected={selected}
+            onSelect={(date) => onChange(date ? format(date, "yyyy-MM-dd") : "")}
+            defaultMonth={selected ?? new Date()}
+            captionLayout="dropdown-buttons"
+            fromYear={1950}
+            toYear={currentYear + 5}
+            className="p-3 pointer-events-auto"
+            initialFocus
+          />
+          <div className="border-t border-border p-2">
+            <Button type="button" variant="ghost" className="w-full" onClick={() => onChange("")}>
+              Clear date
+            </Button>
+          </div>
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
 }
 
 export default function StaffManagement() {
   const nav = useNavigate();
-  const { activeInstitutionId, session } = useAuth();
+  const { activeInstitutionId } = useAuth();
+
   const [loading, setLoading] = useState(false);
   const [list, setList] = useState<StaffRow[]>([]);
-
-  const canUseBirdemAsifEnhancements =
-    activeInstitutionId === BIRDEM_INSTITUTION_ID &&
-    session?.user?.id === ASIF_USER_ID;
+  const [error, setError] = useState<string | null>(null);
 
   const [name, setName] = useState("");
   const [staffCode, setStaffCode] = useState("");
@@ -88,7 +119,6 @@ export default function StaffManagement() {
   const [phone, setPhone] = useState("");
   const [dob, setDob] = useState("");
   const [joiningDate, setJoiningDate] = useState("");
-  const [error, setError] = useState<string | null>(null);
 
   const [editOpen, setEditOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<StaffRow | null>(null);
@@ -99,13 +129,8 @@ export default function StaffManagement() {
   const [editDob, setEditDob] = useState("");
   const [editJoiningDate, setEditJoiningDate] = useState("");
 
-  // Leave statement dialog
   const [statementOpen, setStatementOpen] = useState(false);
   const [statementStaff, setStatementStaff] = useState<StaffRow | null>(null);
-  const [statementLoading, setStatementLoading] = useState(false);
-  const [statementClRemaining, setStatementClRemaining] = useState(0);
-  const [statementOffBalance, setStatementOffBalance] = useState(0);
-  const [statementHistory, setStatementHistory] = useState<LeaveHistoryRow[]>([]);
 
   const load = async () => {
     if (!activeInstitutionId) return;
@@ -139,48 +164,16 @@ export default function StaffManagement() {
       return;
     }
 
-    const dobInput = dob.trim();
-    const joiningInput = joiningDate.trim();
-
-    const dobRes = dateDisplaySchema.safeParse(dobInput);
-    if (!dobRes.success) {
-      setError(dobRes.error.issues[0]?.message ?? "Invalid DOB");
-      return;
-    }
-
-    const joiningRes = dateDisplaySchema.safeParse(joiningInput);
-    if (!joiningRes.success) {
-      setError(joiningRes.error.issues[0]?.message ?? "Invalid joining date");
-      return;
-    }
-
-    const parsedDob = dobInput ? displayDateToIso(dobInput) : null;
-    if (dobInput && !parsedDob) {
-      setError("DOB is invalid. Use a real date in dd/mm/yyyy format.");
-      return;
-    }
-
-    const parsedJoiningDate = joiningInput ? displayDateToIso(joiningInput) : null;
-    if (joiningInput && !parsedJoiningDate) {
-      setError("Date of joining is invalid. Use a real date in dd/mm/yyyy format.");
-      return;
-    }
-
     setLoading(true);
-    const payload: Record<string, unknown> = {
+    const res = await supabase.from("staff").insert({
       institution_id: activeInstitutionId,
       name: trimmedName,
       staff_code: sc || null,
       designation: designation.trim() || null,
       phone: phone.trim() || null,
-    };
-
-    if (canUseBirdemAsifEnhancements) {
-      payload.dob = parsedDob;
-      payload.joining_date = parsedJoiningDate;
-    }
-
-    const res = await supabase.from("staff").insert(payload as any);
+      dob: dob || null,
+      joining_date: joiningDate || null,
+    });
 
     setLoading(false);
     if (res.error) {
@@ -204,8 +197,8 @@ export default function StaffManagement() {
     setEditStaffCode(s.staff_code ?? "");
     setEditDesignation(s.designation ?? "");
     setEditPhone(s.phone ?? "");
-    setEditDob(formatIsoToDisplay(s.dob));
-    setEditJoiningDate(formatIsoToDisplay(s.joining_date));
+    setEditDob(s.dob ?? "");
+    setEditJoiningDate(s.joining_date ?? "");
     setEditOpen(true);
   };
 
@@ -226,49 +219,17 @@ export default function StaffManagement() {
       return;
     }
 
-    const dobInput = editDob.trim();
-    const joiningInput = editJoiningDate.trim();
-
-    const dobRes = dateDisplaySchema.safeParse(dobInput);
-    if (!dobRes.success) {
-      setError(dobRes.error.issues[0]?.message ?? "Invalid DOB");
-      return;
-    }
-
-    const joiningRes = dateDisplaySchema.safeParse(joiningInput);
-    if (!joiningRes.success) {
-      setError(joiningRes.error.issues[0]?.message ?? "Invalid joining date");
-      return;
-    }
-
-    const parsedDob = dobInput ? displayDateToIso(dobInput) : null;
-    if (dobInput && !parsedDob) {
-      setError("DOB is invalid. Use a real date in dd/mm/yyyy format.");
-      return;
-    }
-
-    const parsedJoiningDate = joiningInput ? displayDateToIso(joiningInput) : null;
-    if (joiningInput && !parsedJoiningDate) {
-      setError("Date of joining is invalid. Use a real date in dd/mm/yyyy format.");
-      return;
-    }
-
     setLoading(true);
-    const payload: Record<string, unknown> = {
-      name: trimmedName,
-      staff_code: sc || null,
-      designation: editDesignation.trim() || null,
-      phone: editPhone.trim() || null,
-    };
-
-    if (canUseBirdemAsifEnhancements) {
-      payload.dob = parsedDob;
-      payload.joining_date = parsedJoiningDate;
-    }
-
     const res = await supabase
       .from("staff")
-      .update(payload as any)
+      .update({
+        name: trimmedName,
+        staff_code: sc || null,
+        designation: editDesignation.trim() || null,
+        phone: editPhone.trim() || null,
+        dob: editDob || null,
+        joining_date: editJoiningDate || null,
+      })
       .eq("id", editTarget.id)
       .eq("institution_id", activeInstitutionId);
 
@@ -290,39 +251,18 @@ export default function StaffManagement() {
     void load();
   };
 
-  const openStatement = async (s: StaffRow) => {
+  const openStatement = (s: StaffRow) => {
     setStatementStaff(s);
     setStatementOpen(true);
-
-    if (canUseBirdemAsifEnhancements) {
-      setStatementHistory([]);
-      setStatementClRemaining(0);
-      setStatementOffBalance(0);
-      setStatementLoading(false);
-      return;
-    }
-
-    setStatementLoading(true);
-
-    const [clRes, offRes, histRes] = await Promise.all([
-      supabase.from("cl_balance_view").select("remaining_days").eq("staff_id", s.id).maybeSingle(),
-      supabase.from("off_balance_view").select("off_balance").eq("staff_id", s.id).maybeSingle(),
-      supabase.from("staff_leave_history").select("date,type").eq("staff_id", s.id).order("date", { ascending: true }),
-    ]);
-
-    setStatementClRemaining(Number(((clRes.data as ClBalanceRow | null)?.remaining_days ?? 0) || 0));
-    setStatementOffBalance(Number(((offRes.data as OffBalanceRow | null)?.off_balance ?? 0) || 0));
-    setStatementHistory((histRes.data ?? []) as LeaveHistoryRow[]);
-    setStatementLoading(false);
   };
 
   const subtitle = useMemo(() => format(new Date(), "dd MMM yyyy"), []);
 
   const statementServiceInfo = useMemo(() => {
     if (!statementStaff?.joining_date) return null;
-    const joining = new Date(statementStaff.joining_date);
+    const joining = parseIsoDate(statementStaff.joining_date);
     const now = new Date();
-    if (Number.isNaN(joining.getTime()) || joining > now) return null;
+    if (!joining || joining > now) return null;
 
     const totalDays = differenceInCalendarDays(now, joining) + 1;
     const duration = intervalToDuration({ start: joining, end: now });
@@ -332,14 +272,14 @@ export default function StaffManagement() {
       years: duration.years ?? 0,
       months: duration.months ?? 0,
       days: duration.days ?? 0,
-      fullYears: Math.max(0, differenceInCalendarDays(now, joining) >= 0 ? (duration.years ?? 0) : 0),
+      fullYears: duration.years ?? 0,
     };
   }, [statementStaff]);
 
   const statementPrlDate = useMemo(() => {
     if (!statementStaff?.dob) return null;
-    const birthDate = new Date(statementStaff.dob);
-    if (Number.isNaN(birthDate.getTime())) return null;
+    const birthDate = parseIsoDate(statementStaff.dob);
+    if (!birthDate) return null;
     return addYears(birthDate, 59);
   }, [statementStaff]);
 
@@ -362,13 +302,14 @@ export default function StaffManagement() {
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">Add staff</CardTitle>
-          <CardDescription>Name, staff code, phone and designation.</CardDescription>
+          <CardDescription>Name, staff code, phone, designation, DOB and joining date.</CardDescription>
         </CardHeader>
-        <CardContent className={`grid gap-3 ${canUseBirdemAsifEnhancements ? "md:grid-cols-7" : "md:grid-cols-5"}`}>
+        <CardContent className="grid gap-3 md:grid-cols-7">
           <div className="space-y-2">
             <Label htmlFor="name">Name</Label>
             <Input id="name" value={name} onChange={(e) => setName(e.target.value)} />
           </div>
+
           <div className="space-y-2">
             <Label htmlFor="staff_code">Staff code</Label>
             <Input
@@ -380,39 +321,19 @@ export default function StaffManagement() {
               autoCapitalize="characters"
             />
           </div>
+
           <div className="space-y-2">
             <Label htmlFor="designation">Designation</Label>
             <Input id="designation" value={designation} onChange={(e) => setDesignation(e.target.value)} />
           </div>
+
           <div className="space-y-2">
             <Label htmlFor="phone">Phone</Label>
             <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
           </div>
 
-          {canUseBirdemAsifEnhancements ? (
-            <>
-              <div className="space-y-2">
-                <Label htmlFor="dob">DOB (dd/mm/yyyy)</Label>
-                <Input
-                  id="dob"
-                  value={dob}
-                  onChange={(e) => setDob(e.target.value)}
-                  placeholder="dd/mm/yyyy"
-                  inputMode="numeric"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="joining_date">Date of Joining (dd/mm/yyyy)</Label>
-                <Input
-                  id="joining_date"
-                  value={joiningDate}
-                  onChange={(e) => setJoiningDate(e.target.value)}
-                  placeholder="dd/mm/yyyy"
-                  inputMode="numeric"
-                />
-              </div>
-            </>
-          ) : null}
+          <SmartDatePicker id="dob" label="DOB (dd/mm/yyyy)" value={dob} onChange={setDob} />
+          <SmartDatePicker id="joining_date" label="Date of Joining (dd/mm/yyyy)" value={joiningDate} onChange={setJoiningDate} />
 
           <div className="flex items-end">
             <Button onClick={add} disabled={loading} className="w-full">
@@ -420,7 +341,7 @@ export default function StaffManagement() {
             </Button>
           </div>
 
-          {error ? <p className={`text-sm text-destructive ${canUseBirdemAsifEnhancements ? "md:col-span-7" : "md:col-span-5"}`}>{error}</p> : null}
+          {error ? <p className="text-sm text-destructive md:col-span-7">{error}</p> : null}
         </CardContent>
       </Card>
 
@@ -452,11 +373,7 @@ export default function StaffManagement() {
                 <tr key={s.id} className="border-b last:border-b-0">
                   <td className="py-3 pr-4 font-mono text-xs text-muted-foreground">{s.staff_code ?? "—"}</td>
                   <td className="py-3 pr-4">
-                    <button
-                      type="button"
-                      className="font-medium hover:underline"
-                      onClick={() => void openStatement(s)}
-                    >
+                    <button type="button" className="font-medium hover:underline" onClick={() => openStatement(s)}>
                       {s.name}
                     </button>
                   </td>
@@ -492,7 +409,7 @@ export default function StaffManagement() {
             <DialogDescription>Update staff details including staff code.</DialogDescription>
           </DialogHeader>
 
-          <div className={`grid gap-3 ${canUseBirdemAsifEnhancements ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
+          <div className="grid gap-3 sm:grid-cols-3">
             <div className="space-y-2">
               <Label htmlFor="edit_name">Name</Label>
               <Input id="edit_name" value={editName} onChange={(e) => setEditName(e.target.value)} />
@@ -516,30 +433,14 @@ export default function StaffManagement() {
               <Label htmlFor="edit_phone">Phone</Label>
               <Input id="edit_phone" value={editPhone} onChange={(e) => setEditPhone(e.target.value)} />
             </div>
-            {canUseBirdemAsifEnhancements ? (
-              <>
-                <div className="space-y-2">
-                  <Label htmlFor="edit_dob">DOB (dd/mm/yyyy)</Label>
-                  <Input
-                    id="edit_dob"
-                    value={editDob}
-                    onChange={(e) => setEditDob(e.target.value)}
-                    placeholder="dd/mm/yyyy"
-                    inputMode="numeric"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit_joining_date">Date of Joining (dd/mm/yyyy)</Label>
-                  <Input
-                    id="edit_joining_date"
-                    value={editJoiningDate}
-                    onChange={(e) => setEditJoiningDate(e.target.value)}
-                    placeholder="dd/mm/yyyy"
-                    inputMode="numeric"
-                  />
-                </div>
-              </>
-            ) : null}
+
+            <SmartDatePicker id="edit_dob" label="DOB (dd/mm/yyyy)" value={editDob} onChange={setEditDob} />
+            <SmartDatePicker
+              id="edit_joining_date"
+              label="Date of Joining (dd/mm/yyyy)"
+              value={editJoiningDate}
+              onChange={setEditJoiningDate}
+            />
           </div>
 
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
@@ -566,75 +467,27 @@ export default function StaffManagement() {
           </DialogHeader>
 
           {statementStaff ? (
-            canUseBirdemAsifEnhancements ? (
-              <div className="space-y-4">
-                <div className="grid gap-2 sm:grid-cols-3">
-                  <div className="rounded-md border border-input bg-background p-3">
-                    <div className="text-xs text-muted-foreground">Total service</div>
-                    <div className="text-base font-semibold tabular-nums">
-                      {statementServiceInfo
-                        ? `${statementServiceInfo.totalDays} days (${statementServiceInfo.years}y ${statementServiceInfo.months}m ${statementServiceInfo.days}d)`
-                        : "—"}
-                    </div>
-                  </div>
-                  <div className="rounded-md border border-input bg-background p-3">
-                    <div className="text-xs text-muted-foreground">PRL Date</div>
-                    <div className="text-base font-semibold tabular-nums">
-                      {statementPrlDate ? format(statementPrlDate, "dd/MM/yyyy") : "—"}
-                    </div>
-                  </div>
-                  <div className="rounded-md border border-input bg-background p-3">
-                    <div className="text-xs text-muted-foreground">Total EL balance</div>
-                    <div className="text-base font-semibold tabular-nums">{statementElBalance}</div>
+            <div className="space-y-4">
+              <div className="grid gap-2 sm:grid-cols-3">
+                <div className="rounded-md border border-input bg-background p-3">
+                  <div className="text-xs text-muted-foreground">Total service</div>
+                  <div className="text-base font-semibold tabular-nums">
+                    {statementServiceInfo
+                      ? `${statementServiceInfo.totalDays} days (${statementServiceInfo.years}y ${statementServiceInfo.months}m ${statementServiceInfo.days}d)`
+                      : "—"}
                   </div>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  EL formula: (full service years × 33) − (every completed 3 years × 15).
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <div className="grid gap-2 sm:grid-cols-2">
-                  <div className="rounded-md border border-input bg-background p-3">
-                    <div className="text-xs text-muted-foreground">CL remaining</div>
-                    <div className="text-xl font-semibold tabular-nums">{statementClRemaining}</div>
-                  </div>
-                  <div className="rounded-md border border-input bg-background p-3">
-                    <div className="text-xs text-muted-foreground">OFF balance</div>
-                    <div className="text-xl font-semibold tabular-nums">{statementOffBalance}</div>
-                  </div>
+                <div className="rounded-md border border-input bg-background p-3">
+                  <div className="text-xs text-muted-foreground">PRL Date</div>
+                  <div className="text-base font-semibold tabular-nums">{statementPrlDate ? format(statementPrlDate, "dd/MM/yyyy") : "—"}</div>
                 </div>
-
-                <div className="overflow-x-auto">
-                  <table className="w-full min-w-[520px] text-sm">
-                    <thead className="text-left text-xs text-muted-foreground">
-                      <tr className="border-b">
-                        <th className="py-3 pr-4">Date</th>
-                        <th className="py-3 pr-4">Type</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {statementLoading ? (
-                        <tr>
-                          <td colSpan={2} className="py-10 text-center text-muted-foreground">Loading…</td>
-                        </tr>
-                      ) : statementHistory.length === 0 ? (
-                        <tr>
-                          <td colSpan={2} className="py-10 text-center text-muted-foreground">No leave history.</td>
-                        </tr>
-                      ) : (
-                        statementHistory.map((r, idx) => (
-                          <tr key={`${r.date}-${idx}`} className="border-b last:border-b-0">
-                            <td className="py-3 pr-4 tabular-nums">{r.date ?? "—"}</td>
-                            <td className="py-3 pr-4">{r.type ?? "—"}</td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
+                <div className="rounded-md border border-input bg-background p-3">
+                  <div className="text-xs text-muted-foreground">Total EL balance</div>
+                  <div className="text-base font-semibold tabular-nums">{statementElBalance}</div>
                 </div>
               </div>
-            )
+              <p className="text-xs text-muted-foreground">EL formula: (full service years × 33) − (every completed 3 years × 15).</p>
+            </div>
           ) : null}
 
           <DialogFooter>
