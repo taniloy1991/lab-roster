@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { addYears, differenceInCalendarDays, format, intervalToDuration, isValid, parse } from "date-fns";
+import { format, isValid, parse } from "date-fns";
 import { CalendarDays } from "lucide-react";
 import { z } from "zod";
 import { useNavigate } from "react-router-dom";
@@ -21,6 +21,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { calculateStaffStatementMetrics } from "@/pages/app/staffStatementMetrics";
 
 type StaffRow = {
   id: string;
@@ -258,37 +259,14 @@ export default function StaffManagement() {
 
   const subtitle = useMemo(() => format(new Date(), "dd MMM yyyy"), []);
 
-  const statementServiceInfo = useMemo(() => {
-    if (!statementStaff?.joining_date) return null;
-    const joining = parseIsoDate(statementStaff.joining_date);
-    const now = new Date();
-    if (!joining || joining > now) return null;
-
-    const totalDays = differenceInCalendarDays(now, joining) + 1;
-    const duration = intervalToDuration({ start: joining, end: now });
-
-    return {
-      totalDays,
-      years: duration.years ?? 0,
-      months: duration.months ?? 0,
-      days: duration.days ?? 0,
-      fullYears: duration.years ?? 0,
-    };
-  }, [statementStaff]);
-
-  const statementPrlDate = useMemo(() => {
-    if (!statementStaff?.dob) return null;
-    const birthDate = parseIsoDate(statementStaff.dob);
-    if (!birthDate) return null;
-    return addYears(birthDate, 59);
-  }, [statementStaff]);
-
-  const statementElBalance = useMemo(() => {
-    const fullYears = statementServiceInfo?.fullYears ?? 0;
-    const earned = fullYears * 33;
-    const recreationDeduction = Math.floor(fullYears / 3) * 15;
-    return Math.max(0, earned - recreationDeduction);
-  }, [statementServiceInfo]);
+  const statementMetrics = useMemo(
+    () =>
+      calculateStaffStatementMetrics({
+        dob: statementStaff?.dob ?? null,
+        joiningDate: statementStaff?.joining_date ?? null,
+      }),
+    [statementStaff],
+  );
 
   return (
     <div className="space-y-6">
@@ -468,22 +446,38 @@ export default function StaffManagement() {
 
           {statementStaff ? (
             <div className="space-y-4">
-              <div className="grid gap-2 sm:grid-cols-3">
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                 <div className="rounded-md border border-input bg-background p-3">
                   <div className="text-xs text-muted-foreground">Total service</div>
                   <div className="text-base font-semibold tabular-nums">
-                    {statementServiceInfo
-                      ? `${statementServiceInfo.totalDays} days (${statementServiceInfo.years}y ${statementServiceInfo.months}m ${statementServiceInfo.days}d)`
+                    {statementMetrics.serviceInfo
+                      ? `${statementMetrics.serviceInfo.totalDays} days (${statementMetrics.serviceInfo.years}y ${statementMetrics.serviceInfo.months}m ${statementMetrics.serviceInfo.days}d)`
                       : "—"}
                   </div>
                 </div>
                 <div className="rounded-md border border-input bg-background p-3">
                   <div className="text-xs text-muted-foreground">PRL Date</div>
-                  <div className="text-base font-semibold tabular-nums">{statementPrlDate ? format(statementPrlDate, "dd/MM/yyyy") : "—"}</div>
+                  <div className="text-base font-semibold tabular-nums">{statementMetrics.prlDate ? format(statementMetrics.prlDate, "dd/MM/yyyy") : "—"}</div>
                 </div>
                 <div className="rounded-md border border-input bg-background p-3">
                   <div className="text-xs text-muted-foreground">Total EL balance</div>
-                  <div className="text-base font-semibold tabular-nums">{statementElBalance}</div>
+                  <div className="text-base font-semibold tabular-nums">{statementMetrics.elBalance}</div>
+                </div>
+                <div className="rounded-md border border-input bg-background p-3">
+                  <div className="text-xs text-muted-foreground">Remaining service</div>
+                  <div className="text-base font-semibold tabular-nums">
+                    {statementMetrics.remainingService
+                      ? statementMetrics.remainingService.isRetired
+                        ? "PRL completed"
+                        : `${statementMetrics.remainingService.totalDays} days (${statementMetrics.remainingService.years}y ${statementMetrics.remainingService.months}m ${statementMetrics.remainingService.days}d)`
+                      : "—"}
+                  </div>
+                </div>
+                <div className="rounded-md border border-input bg-background p-3 sm:col-span-2 lg:col-span-2">
+                  <div className="text-xs text-muted-foreground">Recreation leave received</div>
+                  <div className="text-base font-semibold tabular-nums">
+                    {statementMetrics.recreationLeaveCycles} times ({statementMetrics.recreationLeaveDays} days)
+                  </div>
                 </div>
               </div>
               <p className="text-xs text-muted-foreground">EL formula: (full service years × 33) − (every completed 3 years × 15).</p>

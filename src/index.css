@@ -154,7 +154,10 @@
     .monthly-print-page .app-shell,
     .roster-print-page .sidebar,
     .roster-print-page nav,
-    .roster-print-page .app-shell {
+    .roster-print-page .app-shell,
+    .staff-statement-page .sidebar,
+    .staff-statement-page nav,
+    .staff-statement-page .app-shell {
       display: none !important;
     }
 
