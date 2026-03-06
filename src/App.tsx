@@ -91,6 +91,17 @@ const App = () => (
                   }
                 />
                 <Route
+                  path="/app/staff/statement/print"
+                  element={
+                    <RequireAuth>
+                      <RoleGate requireAnyInstitutionRole={["lab_incharge"]}>
+                        <StaffLeaveStatementPrint />
+                      </RoleGate>
+                    </RequireAuth>
+                  }
+                />
+
+                <Route
                   path="/app"
                   element={
                     <RequireAuth>
@@ -131,14 +142,6 @@ const App = () => (
                     element={
                       <RoleGate requireAnyInstitutionRole={["lab_incharge"]}>
                         <StaffManagement />
-                      </RoleGate>
-                    }
-                  />
-                  <Route
-                    path="staff/statement/print"
-                    element={
-                      <RoleGate requireAnyInstitutionRole={["lab_incharge"]}>
-                        <StaffLeaveStatementPrint />
                       </RoleGate>
                     }
                   />

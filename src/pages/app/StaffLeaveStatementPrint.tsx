@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { addYears, differenceInCalendarDays, format, intervalToDuration, isValid, parse } from "date-fns";
+import { format } from "date-fns";
 import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -9,14 +9,9 @@ import { InstitutionPdfHeader } from "@/components/print/InstitutionPdfHeader";
 import { BirdemMicrobiologySignatures } from "@/components/print/BirdemMicrobiologySignatures";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { calculateStaffStatementMetrics } from "@/pages/app/staffStatementMetrics";
 
 type StaffRow = { name: string | null; dob: string | null; joining_date: string | null };
-
-function parseIsoDate(isoDate: string | null) {
-  if (!isoDate) return undefined;
-  const parsed = parse(isoDate, "yyyy-MM-dd", new Date());
-  return isValid(parsed) ? parsed : undefined;
-}
 
 export default function StaffLeaveStatementPrint() {
   const { loading: authLoading, session, institutionRoles, globalRoles } = useAuth();
@@ -46,34 +41,14 @@ export default function StaffLeaveStatementPrint() {
 
   const title = useMemo(() => "BIRDEM Microbiology Laboratory", []);
 
-  const serviceInfo = useMemo(() => {
-    const joining = parseIsoDate(staff?.joining_date ?? null);
-    const now = new Date();
-    if (!joining || joining > now) return null;
-
-    const totalDays = differenceInCalendarDays(now, joining) + 1;
-    const duration = intervalToDuration({ start: joining, end: now });
-
-    return {
-      totalDays,
-      years: duration.years ?? 0,
-      months: duration.months ?? 0,
-      days: duration.days ?? 0,
-      fullYears: duration.years ?? 0,
-    };
-  }, [staff?.joining_date]);
-
-  const prlDate = useMemo(() => {
-    const dob = parseIsoDate(staff?.dob ?? null);
-    return dob ? addYears(dob, 59) : null;
-  }, [staff?.dob]);
-
-  const elBalance = useMemo(() => {
-    const fullYears = serviceInfo?.fullYears ?? 0;
-    const earned = fullYears * 33;
-    const recreationDeduction = Math.floor(fullYears / 3) * 15;
-    return Math.max(0, earned - recreationDeduction);
-  }, [serviceInfo]);
+  const statementMetrics = useMemo(
+    () =>
+      calculateStaffStatementMetrics({
+        dob: staff?.dob ?? null,
+        joiningDate: staff?.joining_date ?? null,
+      }),
+    [staff?.dob, staff?.joining_date],
+  );
 
   if (authLoading) return null;
   if (!session) return <Navigate to="/login" replace />;
@@ -83,9 +58,10 @@ export default function StaffLeaveStatementPrint() {
   return (
     <PrintLayout
       pageClassName="staff-statement-page"
-      className="bg-card"
+      className="bg-card print:py-6"
       footer={<BirdemMicrobiologySignatures />}
       footerClassName="print:break-inside-avoid"
+      compact
     >
       <div className="pdf-header hidden print:block mb-6">
         <InstitutionPdfHeader />
@@ -94,7 +70,7 @@ export default function StaffLeaveStatementPrint() {
         </div>
       </div>
 
-      <div className="space-y-6">
+      <div className="space-y-5">
         <header className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between print:hidden">
           <div>
             <h2 className="text-2xl font-semibold tracking-tight">Staff Leave Statement</h2>
@@ -112,20 +88,38 @@ export default function StaffLeaveStatementPrint() {
             <CardTitle className="text-lg">{staff?.name ?? "—"}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid gap-2 md:grid-cols-3">
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
               <div className="rounded-md border border-input bg-background p-3">
                 <div className="text-xs text-muted-foreground">Total service</div>
                 <div className="text-xl font-semibold tabular-nums">
-                  {serviceInfo ? `${serviceInfo.totalDays} days (${serviceInfo.years}y ${serviceInfo.months}m ${serviceInfo.days}d)` : "—"}
+                  {statementMetrics.serviceInfo
+                    ? `${statementMetrics.serviceInfo.totalDays} days (${statementMetrics.serviceInfo.years}y ${statementMetrics.serviceInfo.months}m ${statementMetrics.serviceInfo.days}d)`
+                    : "—"}
                 </div>
               </div>
               <div className="rounded-md border border-input bg-background p-3">
                 <div className="text-xs text-muted-foreground">PRL Date</div>
-                <div className="text-xl font-semibold tabular-nums">{prlDate ? format(prlDate, "dd/MM/yyyy") : "—"}</div>
+                <div className="text-xl font-semibold tabular-nums">{statementMetrics.prlDate ? format(statementMetrics.prlDate, "dd/MM/yyyy") : "—"}</div>
               </div>
               <div className="rounded-md border border-input bg-background p-3">
                 <div className="text-xs text-muted-foreground">Total EL balance</div>
-                <div className="text-xl font-semibold tabular-nums">{elBalance}</div>
+                <div className="text-xl font-semibold tabular-nums">{statementMetrics.elBalance}</div>
+              </div>
+              <div className="rounded-md border border-input bg-background p-3">
+                <div className="text-xs text-muted-foreground">Remaining service</div>
+                <div className="text-xl font-semibold tabular-nums">
+                  {statementMetrics.remainingService
+                    ? statementMetrics.remainingService.isRetired
+                      ? "PRL completed"
+                      : `${statementMetrics.remainingService.totalDays} days (${statementMetrics.remainingService.years}y ${statementMetrics.remainingService.months}m ${statementMetrics.remainingService.days}d)`
+                    : "—"}
+                </div>
+              </div>
+              <div className="rounded-md border border-input bg-background p-3 sm:col-span-2 lg:col-span-2">
+                <div className="text-xs text-muted-foreground">Recreation leave received</div>
+                <div className="text-xl font-semibold tabular-nums">
+                  {statementMetrics.recreationLeaveCycles} times ({statementMetrics.recreationLeaveDays} days)
+                </div>
               </div>
             </div>
 
