@@ -106,29 +106,13 @@ export default function LabDashboard() {
     const staffIds = staff.map((s) => s.id);
     const staffNameById = new Map<string, string>(staff.map((s) => [s.id, s.name]));
 
-    const [holidayRes, todayRosterRes, todayLeaveRosterRes] = await Promise.all([
-      supabase
-        .from("holidays")
-        .select("staff_id,holiday_type")
-        .eq("institution_id", activeInstitutionId)
-        .eq("holiday_date", today)
-        .in("staff_id", staffIds.length ? staffIds : ["00000000-0000-0000-0000-000000000000"]),
-      supabase
-        .from("roster_visual_entries" as any)
-        .select("shift,staff_id,responsibility_note")
-        .eq("institution_id", activeInstitutionId)
-        .eq("duty_date", today)
-        .not("shift", "is", null)
-        .order("created_at", { ascending: true }),
-      supabase
-        .from("roster_visual_entries" as any)
-        .select("staff_id,leave_type")
-        .eq("institution_id", activeInstitutionId)
-        .eq("duty_date", today)
-        .not("staff_id", "is", null)
-        .not("leave_type", "is", null)
-        .neq("leave_type", "none"),
-    ]);
+    const todayRosterRes = await supabase
+      .from("roster_visual_entries" as any)
+      .select("shift,staff_id,responsibility_note")
+      .eq("institution_id", activeInstitutionId)
+      .eq("duty_date", today)
+      .not("shift", "is", null)
+      .order("created_at", { ascending: true });
 
     const holidayRows = (holidayRes.data ?? []) as HolidayRow[];
     const onLeaveToday = holidayRows.filter((r) => {
