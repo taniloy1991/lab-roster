@@ -159,7 +159,6 @@ export default function LabDashboard() {
     return [
       { label: "Total Staff", value: v?.totalStaff ?? "—" },
       { label: "On Duty Today", value: v?.onDutyToday ?? "—" },
-      { label: "On Leave Today", value: v?.onLeaveToday ?? "—" },
     ];
   }, [kpis]);
 
