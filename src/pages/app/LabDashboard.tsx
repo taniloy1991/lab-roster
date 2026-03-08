@@ -45,7 +45,6 @@ export default function LabDashboard() {
   const [kpis, setKpis] = useState<{
     totalStaff: number;
     onDutyToday: number;
-    totalElAdded: number;
     totalGeneralOffAdded: number;
   } | null>(null);
 
@@ -76,7 +75,7 @@ export default function LabDashboard() {
         "overview_prepared_by_title",
       ];
 
-      const [instRes, staffRes, settingsRes, clRes, offEarnRes] = await Promise.all([
+      const [instRes, staffRes, settingsRes, offEarnRes] = await Promise.all([
         supabase.from("institutions").select("name,updated_at").eq("id", activeInstitutionId).maybeSingle(),
         supabase
           .from("staff")
@@ -85,12 +84,6 @@ export default function LabDashboard() {
           .eq("is_active", true)
           .order("name"),
         supabase.from("app_settings").select("setting_key,setting_value").in("setting_key", settingsKeys),
-        supabase
-          .from("cl_transactions")
-          .select("total_days")
-          .eq("institution_id", activeInstitutionId)
-          .gte("start_date", yearStart)
-          .lte("end_date", yearEnd),
         supabase
           .from("general_off_earn")
           .select("days_earned")
@@ -155,10 +148,6 @@ export default function LabDashboard() {
         { shift: "night", entries: byShift.get("night") ?? [] },
       ]);
 
-      const totalElAdded = ((clRes.data ?? []) as Array<{ total_days: number | null }>).reduce(
-        (sum, row) => sum + (row.total_days ?? 0),
-        0,
-      );
       const totalGeneralOffAdded = ((offEarnRes.data ?? []) as Array<{ days_earned: number | null }>).reduce(
         (sum, row) => sum + (row.days_earned ?? 0),
         0,
@@ -167,7 +156,6 @@ export default function LabDashboard() {
       setKpis({
         totalStaff: staff.length,
         onDutyToday: onDutyStaffIds.size,
-        totalElAdded,
         totalGeneralOffAdded,
       });
     } finally {
@@ -186,7 +174,6 @@ export default function LabDashboard() {
     return [
       { label: "Total Staff", value: v?.totalStaff ?? "—" },
       { label: "On Duty Today", value: v?.onDutyToday ?? "—" },
-      { label: "EL Added (Year)", value: v?.totalElAdded ?? "—" },
       { label: "General OFF Added (Year)", value: v?.totalGeneralOffAdded ?? "—" },
     ];
   }, [kpis]);
