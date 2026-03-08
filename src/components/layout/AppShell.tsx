@@ -196,16 +196,10 @@ export function AppShell() {
               variant="outline"
               size="sm"
               className="gap-1"
-              onClick={() => {
-                if (window.history.length > 1) {
-                  navigate(-1);
-                  return;
-                }
-                navigate("/app");
-              }}
+              onClick={() => navigate("/app")}
             >
               <ArrowLeft className="h-4 w-4" />
-              Back
+              Back to Overview
             </Button>
           </div>
           <Outlet />

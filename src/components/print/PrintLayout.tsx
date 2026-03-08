@@ -1,4 +1,8 @@
 import React from "react";
+import { ArrowLeft } from "lucide-react";
+import { Link } from "react-router-dom";
+
+import { Button } from "@/components/ui/button";
 
 export function PrintLayout(props: {
   className?: string;
@@ -20,6 +24,15 @@ export function PrintLayout(props: {
           (className ?? "")
         }
       >
+        <div className="mb-4 print:hidden">
+          <Button asChild type="button" variant="outline" size="sm" className="gap-1">
+            <Link to="/app">
+              <ArrowLeft className="h-4 w-4" />
+              Back to Overview
+            </Link>
+          </Button>
+        </div>
+
         <div className={compact ? "" : "flex-1"}>{children}</div>
 
         {footer ? (
