@@ -48,7 +48,7 @@ export default function RosterCalendar() {
       if (!activeInstitutionId) return;
       const res = await supabase
         .from("staff")
-        .select("id,name")
+        .select("id,name,designation,phone")
         .eq("institution_id", activeInstitutionId)
         .eq("is_active", true)
         .order("name");
