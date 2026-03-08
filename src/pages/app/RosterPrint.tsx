@@ -132,18 +132,12 @@ export default function RosterPrint() {
 
     const fmtStaff = (arr?: { staff: string; note: string }[]) => {
       if (!arr?.length) return "";
-      return arr.map((x) => x.staff).join(", ");
-    };
-
-    const fmtNotes = (arr?: { staff: string; note: string }[]) => {
-      if (!arr?.length) return "";
-      const notesOnly = arr
+      return arr
         .map((x) => {
-          const t = x.note.trim();
-          return t ? `${x.staff}: ${t}` : "";
+          const duty = x.note.trim();
+          return duty ? `${x.staff} • ${duty}` : x.staff;
         })
-        .filter(Boolean);
-      return notesOnly.join("\n");
+        .join(", ");
     };
 
     setRows(
@@ -154,9 +148,7 @@ export default function RosterPrint() {
         return {
           duty_date: d,
           morning_staff: fmtStaff(m),
-          morning_note: fmtNotes(m),
           evening_staff: fmtStaff(e),
-          evening_note: fmtNotes(e),
           leave_status: leaveStatusByDate.get(d) ?? "",
         };
       }),
