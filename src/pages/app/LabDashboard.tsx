@@ -52,7 +52,7 @@ export default function LabDashboard() {
     { shift: "evening", entries: [] },
     { shift: "night", entries: [] },
   ]);
-  const [todayLeaveNames, setTodayLeaveNames] = useState<string[]>([]);
+  
 
   const today = useMemo(() => format(new Date(), "yyyy-MM-dd"), []);
 
