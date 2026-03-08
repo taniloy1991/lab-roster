@@ -274,7 +274,7 @@ export default function RosterPrint() {
                     ) : null}
 
 
-                    {!hasMorning && !hasEvening && !hasNight ? (
+                    {!hasMorning && !hasEvening ? (
                       <div className="text-xs text-muted-foreground">No roster entries.</div>
                     ) : null}
                   </div>
