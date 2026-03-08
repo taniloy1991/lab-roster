@@ -38,7 +38,7 @@ export default function LabDashboard() {
   const [loading, setLoading] = useState(false);
   const [institutionName, setInstitutionName] = useState<string | null>(null);
   const [lastUpdatedAt, setLastUpdatedAt] = useState<string | null>(null);
-  const [overviewLogo, setOverviewLogo] = useState("/images/birdem-logo.png");
+  const [overviewLogo, setOverviewLogo] = useState("/images/lab-roaster-app-logo-2.png");
   const [overviewPreparedByName, setOverviewPreparedByName] = useState("Md. Asif Hossain");
   const [overviewPreparedByTitle, setOverviewPreparedByTitle] = useState("Research Assistant");
 
