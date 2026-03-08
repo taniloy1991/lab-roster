@@ -10,7 +10,6 @@ import { KpiCards, type KpiItem } from "./lab/KpiCards";
 import { TodayDutyOverview, type TodayDutyShift } from "./lab/TodayDutyOverview";
 
 type StaffRow = { id: string; name: string };
-type HolidayRow = { staff_id: string | null; holiday_type: string | null };
 type AppSettingRow = { setting_key: string | null; setting_value: string | null };
 
 function BdClock() {
@@ -46,7 +45,6 @@ export default function LabDashboard() {
   const [kpis, setKpis] = useState<{
     totalStaff: number;
     onDutyToday: number;
-    onLeaveToday: number;
   } | null>(null);
 
   const [todayDuty, setTodayDuty] = useState<TodayDutyShift[]>([
@@ -54,7 +52,7 @@ export default function LabDashboard() {
     { shift: "evening", entries: [] },
     { shift: "night", entries: [] },
   ]);
-  const [todayLeaveNames, setTodayLeaveNames] = useState<string[]>([]);
+  
 
   const today = useMemo(() => format(new Date(), "yyyy-MM-dd"), []);
 
@@ -108,35 +106,14 @@ export default function LabDashboard() {
     const staffIds = staff.map((s) => s.id);
     const staffNameById = new Map<string, string>(staff.map((s) => [s.id, s.name]));
 
-    const [holidayRes, todayRosterRes, todayLeaveRosterRes] = await Promise.all([
-      supabase
-        .from("holidays")
-        .select("staff_id,holiday_type")
-        .eq("institution_id", activeInstitutionId)
-        .eq("holiday_date", today)
-        .in("staff_id", staffIds.length ? staffIds : ["00000000-0000-0000-0000-000000000000"]),
-      supabase
-        .from("roster_visual_entries" as any)
-        .select("shift,staff_id,responsibility_note")
-        .eq("institution_id", activeInstitutionId)
-        .eq("duty_date", today)
-        .not("shift", "is", null)
-        .order("created_at", { ascending: true }),
-      supabase
-        .from("roster_visual_entries" as any)
-        .select("staff_id,leave_type")
-        .eq("institution_id", activeInstitutionId)
-        .eq("duty_date", today)
-        .not("staff_id", "is", null)
-        .not("leave_type", "is", null)
-        .neq("leave_type", "none"),
-    ]);
+    const todayRosterRes = await supabase
+      .from("roster_visual_entries" as any)
+      .select("shift,staff_id,responsibility_note")
+      .eq("institution_id", activeInstitutionId)
+      .eq("duty_date", today)
+      .not("shift", "is", null)
+      .order("created_at", { ascending: true });
 
-    const holidayRows = (holidayRes.data ?? []) as HolidayRow[];
-    const onLeaveToday = holidayRows.filter((r) => {
-      const t = String(r.holiday_type ?? "").toLowerCase();
-      return t === "casual" || t === "general_off";
-    }).length;
 
     const byShift = new Map<"morning" | "evening" | "night", Array<{ staff: string; note: string }>>([
       ["morning", []],
@@ -155,24 +132,17 @@ export default function LabDashboard() {
       if (sid) onDutyStaffIds.add(sid);
     }
 
-    const leaveNameSet = new Set<string>();
-    for (const r of (todayLeaveRosterRes.data ?? []) as any[]) {
-      const sid = String(r.staff_id ?? "").trim();
-      const staffName = sid ? staffNameById.get(sid) ?? "" : "";
-      if (staffName) leaveNameSet.add(staffName);
-    }
 
     setTodayDuty([
       { shift: "morning", entries: byShift.get("morning") ?? [] },
       { shift: "evening", entries: byShift.get("evening") ?? [] },
       { shift: "night", entries: byShift.get("night") ?? [] },
     ]);
-    setTodayLeaveNames(Array.from(leaveNameSet).sort((a, b) => a.localeCompare(b)));
+    
 
     setKpis({
       totalStaff: staff.length,
       onDutyToday: onDutyStaffIds.size,
-      onLeaveToday,
     });
 
     setLoading(false);
@@ -189,7 +159,6 @@ export default function LabDashboard() {
     return [
       { label: "Total Staff", value: v?.totalStaff ?? "—" },
       { label: "On Duty Today", value: v?.onDutyToday ?? "—" },
-      { label: "On Leave Today", value: v?.onLeaveToday ?? "—" },
     ];
   }, [kpis]);
 
@@ -246,11 +215,7 @@ export default function LabDashboard() {
 
       <KpiCards items={kpiItems} />
 
-      <TodayDutyOverview
-        dateLabel={format(parseISO(`${today}T00:00:00`), "dd MMM yyyy")}
-        shifts={todayDuty}
-        leaveStaffNames={todayLeaveNames}
-      />
+      <TodayDutyOverview dateLabel={format(parseISO(`${today}T00:00:00`), "dd MMM yyyy")} shifts={todayDuty} />
     </div>
   );
 }
