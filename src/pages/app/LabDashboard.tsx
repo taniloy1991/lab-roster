@@ -45,7 +45,7 @@ export default function LabDashboard() {
   const [kpis, setKpis] = useState<{
     totalStaff: number;
     onDutyToday: number;
-    totalGeneralOffAdded: number;
+    totalOffBalance: number;
   } | null>(null);
 
   const [todayDuty, setTodayDuty] = useState<TodayDutyShift[]>([
@@ -62,10 +62,6 @@ export default function LabDashboard() {
     setLoading(true);
 
     try {
-      const currentYear = new Date().getFullYear();
-      const yearStart = `${currentYear}-01-01`;
-      const yearEnd = `${currentYear}-12-31`;
-
       const settingsKeys = [
         `overview_logo_url:${activeInstitutionId}`,
         "overview_logo_url",
@@ -75,7 +71,7 @@ export default function LabDashboard() {
         "overview_prepared_by_title",
       ];
 
-      const [instRes, staffRes, settingsRes, offEarnRes] = await Promise.all([
+      const [instRes, staffRes, settingsRes, offBalanceRes] = await Promise.all([
         supabase.from("institutions").select("name,updated_at").eq("id", activeInstitutionId).maybeSingle(),
         supabase
           .from("staff")
@@ -85,11 +81,9 @@ export default function LabDashboard() {
           .order("name"),
         supabase.from("app_settings").select("setting_key,setting_value").in("setting_key", settingsKeys),
         supabase
-          .from("general_off_earn")
-          .select("days_earned")
-          .eq("institution_id", activeInstitutionId)
-          .gte("start_date", yearStart)
-          .lte("end_date", yearEnd),
+          .from("general_off_balance_dynamic")
+          .select("remaining_balance")
+          .eq("institution_id", activeInstitutionId),
       ]);
 
       setInstitutionName(instRes.data?.name ?? null);
@@ -148,15 +142,15 @@ export default function LabDashboard() {
         { shift: "night", entries: byShift.get("night") ?? [] },
       ]);
 
-      const totalGeneralOffAdded = ((offEarnRes.data ?? []) as Array<{ days_earned: number | null }>).reduce(
-        (sum, row) => sum + (row.days_earned ?? 0),
+      const totalOffBalance = ((offBalanceRes.data ?? []) as Array<{ remaining_balance: number | string | null }>).reduce(
+        (sum, row) => sum + Number(row.remaining_balance ?? 0),
         0,
       );
 
       setKpis({
         totalStaff: staff.length,
         onDutyToday: onDutyStaffIds.size,
-        totalGeneralOffAdded,
+        totalOffBalance,
       });
     } finally {
       setLoading(false);
@@ -174,7 +168,7 @@ export default function LabDashboard() {
     return [
       { label: "Total Staff", value: v?.totalStaff ?? "—" },
       { label: "On Duty Today", value: v?.onDutyToday ?? "—" },
-      { label: "General OFF Added (Year)", value: v?.totalGeneralOffAdded ?? "—" },
+      { label: "Total OFF Balance", value: v?.totalOffBalance ?? "—" },
     ];
   }, [kpis]);
 
