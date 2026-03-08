@@ -106,7 +106,7 @@ export default function RosterPrint() {
 
       const k = `${d}:${shift}`;
       const arr = byDateShift.get(k) ?? [];
-      arr.push({ staff: name, note });
+      arr.push({ staff: staffLabel, note });
       byDateShift.set(k, arr);
     }
 
