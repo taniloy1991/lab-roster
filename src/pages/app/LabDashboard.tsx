@@ -45,7 +45,6 @@ export default function LabDashboard() {
   const [kpis, setKpis] = useState<{
     totalStaff: number;
     onDutyToday: number;
-    onLeaveToday: number;
   } | null>(null);
 
   const [todayDuty, setTodayDuty] = useState<TodayDutyShift[]>([
