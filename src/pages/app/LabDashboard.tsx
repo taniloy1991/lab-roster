@@ -114,11 +114,6 @@ export default function LabDashboard() {
       .not("shift", "is", null)
       .order("created_at", { ascending: true });
 
-    const holidayRows = (holidayRes.data ?? []) as HolidayRow[];
-    const onLeaveToday = holidayRows.filter((r) => {
-      const t = String(r.holiday_type ?? "").toLowerCase();
-      return t === "casual" || t === "general_off";
-    }).length;
 
     const byShift = new Map<"morning" | "evening" | "night", Array<{ staff: string; note: string }>>([
       ["morning", []],
