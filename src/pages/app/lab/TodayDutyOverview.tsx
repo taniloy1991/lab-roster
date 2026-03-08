@@ -15,11 +15,9 @@ function titleCase(s: string) {
 export function TodayDutyOverview({
   dateLabel,
   shifts,
-  leaveStaffNames = [],
 }: {
   dateLabel: string;
   shifts: TodayDutyShift[];
-  leaveStaffNames?: string[];
 }) {
   return (
     <section aria-label="Today's duty overview">
