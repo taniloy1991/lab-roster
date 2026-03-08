@@ -15,8 +15,6 @@ type PdfRow = {
   morning_note: string;
   evening_staff: string;
   evening_note: string;
-  night_staff: string;
-  night_note: string;
   leave_status: string;
 };
 

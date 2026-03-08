@@ -13,7 +13,7 @@ import { RosterMonthTable } from "./roster/RosterMonthTable";
 import type { Shift, StaffRow } from "./roster/types";
 import { useRosterVisualMonth } from "./roster/useRosterVisualMonth";
 
-const shifts: Shift[] = ["morning", "evening", "night"];
+const shifts: Shift[] = ["morning", "evening"];
 
 export default function RosterCalendar() {
   const nav = useNavigate();
