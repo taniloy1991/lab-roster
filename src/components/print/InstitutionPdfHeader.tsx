@@ -11,7 +11,7 @@ type HeaderBranding = {
 };
 
 async function fetchInstitutionHeader(activeInstitutionId: string | null): Promise<HeaderBranding> {
-  const fallbackLogo = "/images/birdem-logo.png";
+  const fallbackLogo = "/images/lab-roaster-app-logo-2.png";
   const fallbackLine1 = "Department of Microbiology";
   const fallbackLine2 = "BIRDEM General Hospital";
 
@@ -70,7 +70,7 @@ export function InstitutionPdfHeader() {
     staleTime: 5 * 60 * 1000,
   });
 
-  const logo = data?.logo ?? "/images/birdem-logo.png";
+  const logo = data?.logo ?? "/images/lab-roaster-app-logo-2.png";
   const line1 = data?.line1 ?? "Department of Microbiology";
   const line2 = data?.line2 ?? "BIRDEM GENERAL HOSPITAL";
 

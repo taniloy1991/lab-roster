@@ -20,6 +20,27 @@ type NavItem = { to: string; label: string; icon: React.ReactNode; when?: "lab" 
 
 type InstitutionOption = { id: string; name: string };
 
+async function fetchAppLogo(activeInstitutionId: string | null) {
+  const defaultLogo = "/images/lab-roaster-app-logo-2.png";
+  const keys = activeInstitutionId ? [`app_logo_url:${activeInstitutionId}`, "app_logo_url"] : ["app_logo_url"];
+
+  const res = await supabase.from("app_settings").select("setting_key,setting_value").in("setting_key", keys);
+  if (res.error) throw res.error;
+
+  const byKey = new Map<string, string>();
+  for (const row of res.data ?? []) {
+    const key = String(row.setting_key ?? "").trim();
+    const value = String(row.setting_value ?? "").trim();
+    if (key && value) byKey.set(key, value);
+  }
+
+  if (activeInstitutionId) {
+    return byKey.get(`app_logo_url:${activeInstitutionId}`) ?? byKey.get("app_logo_url") ?? defaultLogo;
+  }
+
+  return byKey.get("app_logo_url") ?? defaultLogo;
+}
+
 export function AppShell() {
   const { signOut, refresh, userId, institutionRoles, globalRoles, activeInstitutionId } = useAuth();
   const navigate = useNavigate();
@@ -47,6 +68,12 @@ export function AppShell() {
       const res = await supabase.from("institutions").select("name").eq("id", activeInstitutionId).maybeSingle();
       return res.data?.name ?? null;
     },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const { data: appLogo } = useQuery({
+    queryKey: ["app_settings", "app_logo_url", activeInstitutionId],
+    queryFn: () => fetchAppLogo(activeInstitutionId),
     staleTime: 5 * 60 * 1000,
   });
 
@@ -106,11 +133,21 @@ export function AppShell() {
               <div className="border-b p-5">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="text-xs font-medium text-muted-foreground">Laboratory Roster Management</p>
+                    <div className="mb-3 flex items-center gap-2">
+                      <img
+                        src={appLogo ?? "/images/lab-roaster-app-logo-2.png"}
+                        alt="App logo"
+                        className="h-9 w-9 rounded-md object-contain"
+                        loading="eager"
+                      />
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground">Laboratory Roster Management</p>
+                        <h1 className="text-base font-semibold tracking-tight">Dashboard</h1>
+                      </div>
+                    </div>
                     {institutionName ? (
                       <p className="mt-1 truncate text-xs font-medium text-foreground/80">{institutionName}</p>
                     ) : null}
-                    <h1 className="text-base font-semibold tracking-tight">Dashboard</h1>
 
                     {isSuperAdmin && (myInstitutions?.length ?? 0) > 0 ? (
                       <div className="mt-3">

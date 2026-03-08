@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/providers/AuthProvider";
 
+const appLogo = "/images/lab-roaster-app-logo-2.png";
+
 const Index = () => {
   const { loading, session } = useAuth();
 
@@ -13,6 +15,9 @@ const Index = () => {
       <div className="flex min-h-screen items-center justify-center bg-background p-4">
         <Card className="w-full max-w-lg">
           <CardHeader>
+            <div className="mb-2 flex justify-center">
+              <img src={appLogo} alt="Lab roster app logo" className="h-20 w-20 object-contain" loading="eager" />
+            </div>
             <CardTitle>Continue</CardTitle>
             <CardDescription>You’re signed in.</CardDescription>
           </CardHeader>
@@ -30,6 +35,9 @@ const Index = () => {
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <Card className="w-full max-w-lg">
         <CardHeader>
+          <div className="mb-2 flex justify-center">
+            <img src={appLogo} alt="Lab roster app logo" className="h-20 w-20 object-contain" loading="eager" />
+          </div>
           <CardTitle>Laboratory Roster Management</CardTitle>
           <CardDescription>Minimal multi-institution roster, leave & OFF balance system.</CardDescription>
         </CardHeader>
