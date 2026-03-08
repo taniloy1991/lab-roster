@@ -71,6 +71,12 @@ export function AppShell() {
     staleTime: 5 * 60 * 1000,
   });
 
+  const { data: appLogo } = useQuery({
+    queryKey: ["app_settings", "app_logo_url", activeInstitutionId],
+    queryFn: () => fetchAppLogo(activeInstitutionId),
+    staleTime: 5 * 60 * 1000,
+  });
+
   const items: NavItem[] = useMemo(
     () => [
       { to: "/app", label: "Overview", icon: <Home className="h-4 w-4" />, when: "any" },
