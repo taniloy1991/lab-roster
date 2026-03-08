@@ -76,25 +76,20 @@ export function InstitutionPdfHeader() {
 
   return (
     <div className="mx-auto max-w-5xl px-4">
-      <div className="flex items-start gap-4">
-        <div className="w-16 shrink-0">
-          {logo ? (
-            <img
-              src={logo}
-              alt="Institution logo"
-              className="h-14 w-14 object-contain"
-              loading="eager"
-            />
-          ) : null}
-        </div>
+      <div className="flex items-center justify-center gap-4">
+        {logo ? (
+          <img
+            src={logo}
+            alt="Institution logo"
+            className="h-20 w-20 shrink-0 object-contain"
+            loading="eager"
+          />
+        ) : null}
 
-        <div className="flex-1 text-center">
+        <div className="text-left">
           <div className="text-base font-semibold leading-tight text-foreground">{line1}</div>
           <div className="text-base font-semibold leading-tight text-foreground">{line2}</div>
         </div>
-
-        {/* right spacer to keep the title centered even when logo exists */}
-        <div className="w-16 shrink-0" />
       </div>
     </div>
   );
