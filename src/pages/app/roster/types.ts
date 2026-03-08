@@ -1,4 +1,4 @@
-export type StaffRow = { id: string; name: string; designation: string | null; phone: string | null };
+export type StaffRow = { id: string; name: string; designation?: string | null; phone?: string | null };
 
 export type RosterDay = {
   id: string;
