@@ -20,6 +20,27 @@ type NavItem = { to: string; label: string; icon: React.ReactNode; when?: "lab" 
 
 type InstitutionOption = { id: string; name: string };
 
+async function fetchAppLogo(activeInstitutionId: string | null) {
+  const defaultLogo = "/images/lab-roaster-app-logo-2.png";
+  const keys = activeInstitutionId ? [`app_logo_url:${activeInstitutionId}`, "app_logo_url"] : ["app_logo_url"];
+
+  const res = await supabase.from("app_settings").select("setting_key,setting_value").in("setting_key", keys);
+  if (res.error) throw res.error;
+
+  const byKey = new Map<string, string>();
+  for (const row of res.data ?? []) {
+    const key = String(row.setting_key ?? "").trim();
+    const value = String(row.setting_value ?? "").trim();
+    if (key && value) byKey.set(key, value);
+  }
+
+  if (activeInstitutionId) {
+    return byKey.get(`app_logo_url:${activeInstitutionId}`) ?? byKey.get("app_logo_url") ?? defaultLogo;
+  }
+
+  return byKey.get("app_logo_url") ?? defaultLogo;
+}
+
 export function AppShell() {
   const { signOut, refresh, userId, institutionRoles, globalRoles, activeInstitutionId } = useAuth();
   const navigate = useNavigate();

@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/providers/AuthProvider";
 
+const appLogo = "/images/lab-roaster-app-logo-2.png";
+
 const Index = () => {
   const { loading, session } = useAuth();
 
