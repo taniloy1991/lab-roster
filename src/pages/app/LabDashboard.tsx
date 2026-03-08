@@ -143,7 +143,6 @@ export default function LabDashboard() {
     setKpis({
       totalStaff: staff.length,
       onDutyToday: onDutyStaffIds.size,
-      onLeaveToday,
     });
 
     setLoading(false);
