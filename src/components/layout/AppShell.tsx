@@ -50,11 +50,6 @@ export function AppShell() {
     staleTime: 5 * 60 * 1000,
   });
 
-  const { data: appLogo } = useQuery({
-    queryKey: ["app_settings", "app_logo_url", activeInstitutionId],
-    queryFn: () => fetchAppLogo(activeInstitutionId),
-    staleTime: 5 * 60 * 1000,
-  });
 
   const items: NavItem[] = useMemo(
     () => [
