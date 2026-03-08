@@ -62,6 +62,10 @@ export default function LabDashboard() {
     if (!activeInstitutionId) return;
     setLoading(true);
 
+    const currentYear = new Date().getFullYear();
+    const yearStart = `${currentYear}-01-01`;
+    const yearEnd = `${currentYear}-12-31`;
+
     const settingsKeys = [
       `overview_logo_url:${activeInstitutionId}`,
       "overview_logo_url",
@@ -71,7 +75,7 @@ export default function LabDashboard() {
       "overview_prepared_by_title",
     ];
 
-    const [instRes, staffRes, settingsRes] = await Promise.all([
+    const [instRes, staffRes, settingsRes, clRes, offEarnRes] = await Promise.all([
       supabase.from("institutions").select("name,updated_at").eq("id", activeInstitutionId).maybeSingle(),
       supabase
         .from("staff")
@@ -80,6 +84,18 @@ export default function LabDashboard() {
         .eq("is_active", true)
         .order("name"),
       supabase.from("app_settings").select("setting_key,setting_value").in("setting_key", settingsKeys),
+      supabase
+        .from("cl_transactions")
+        .select("total_days")
+        .eq("institution_id", activeInstitutionId)
+        .gte("start_date", yearStart)
+        .lte("end_date", yearEnd),
+      supabase
+        .from("general_off_earn")
+        .select("days_earned")
+        .eq("institution_id", activeInstitutionId)
+        .gte("start_date", yearStart)
+        .lte("end_date", yearEnd),
     ]);
 
     setInstitutionName(instRes.data?.name ?? null);
