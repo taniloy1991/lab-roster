@@ -76,6 +76,7 @@ export default function RosterCalendar() {
     const res = await supabase
       .from("selected_roster_dates")
       .select("duty_date")
+      .eq("institution_id", activeInstitutionId)
       .gte("duty_date", format(range.start, "yyyy-MM-dd"))
       .lte("duty_date", format(range.end, "yyyy-MM-dd"));
 
@@ -88,6 +89,8 @@ export default function RosterCalendar() {
   }, [activeInstitutionId, month]);
 
   const toggleDate = async (dutyDate: string) => {
+    if (!activeInstitutionId) return;
+
     const wasSelected = selectedDates.has(dutyDate);
 
     setSelectedDates((prev) => {
@@ -98,32 +101,38 @@ export default function RosterCalendar() {
     });
 
     if (wasSelected) {
-      await supabase.from("selected_roster_dates").delete().eq("duty_date", dutyDate);
+      await supabase.from("selected_roster_dates").delete().eq("institution_id", activeInstitutionId).eq("duty_date", dutyDate);
     } else {
-      await supabase.from("selected_roster_dates").delete().eq("duty_date", dutyDate);
-      await supabase.from("selected_roster_dates").insert({ duty_date: dutyDate });
+      await supabase.from("selected_roster_dates").delete().eq("institution_id", activeInstitutionId).eq("duty_date", dutyDate);
+      await supabase.from("selected_roster_dates").insert({ institution_id: activeInstitutionId, duty_date: dutyDate });
     }
   };
 
   const selectAll = async () => {
+    if (!activeInstitutionId) return;
+
     const dates = monthDays;
     setSelectedDates(new Set(dates));
     await supabase
       .from("selected_roster_dates")
       .delete()
+      .eq("institution_id", activeInstitutionId)
       .gte("duty_date", format(range.start, "yyyy-MM-dd"))
       .lte("duty_date", format(range.end, "yyyy-MM-dd"));
 
     if (dates.length) {
-      await supabase.from("selected_roster_dates").insert(dates.map((d) => ({ duty_date: d })));
+      await supabase.from("selected_roster_dates").insert(dates.map((d) => ({ institution_id: activeInstitutionId, duty_date: d })));
     }
   };
 
   const clearSelection = async () => {
+    if (!activeInstitutionId) return;
+
     setSelectedDates(new Set());
     await supabase
       .from("selected_roster_dates")
       .delete()
+      .eq("institution_id", activeInstitutionId)
       .gte("duty_date", format(range.start, "yyyy-MM-dd"))
       .lte("duty_date", format(range.end, "yyyy-MM-dd"));
   };

@@ -991,14 +991,25 @@ export type Database = {
       selected_roster_dates: {
         Row: {
           duty_date: string
+          institution_id: string
         }
         Insert: {
           duty_date: string
+          institution_id: string
         }
         Update: {
           duty_date?: string
+          institution_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "selected_roster_dates_institution_id_fkey"
+            columns: ["institution_id"]
+            isOneToOne: false
+            referencedRelation: "institutions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       staff: {
         Row: {
