@@ -273,18 +273,6 @@ export default function RosterPrint() {
                       </div>
                     ) : null}
 
-                    {hasNight ? (
-                      <div className="grid grid-cols-[90px_1fr] gap-x-3 gap-y-1">
-                        <div className="text-xs font-semibold text-muted-foreground">Night</div>
-                        <div className="text-sm">{r.night_staff}</div>
-                        {r.night_note ? (
-                          <>
-                            <div className="text-xs text-muted-foreground">Note</div>
-                            <div className="text-xs whitespace-pre-wrap">{r.night_note}</div>
-                          </>
-                        ) : null}
-                      </div>
-                    ) : null}
 
                     {!hasMorning && !hasEvening && !hasNight ? (
                       <div className="text-xs text-muted-foreground">No roster entries.</div>
