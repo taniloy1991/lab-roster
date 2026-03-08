@@ -135,7 +135,7 @@ export default function RosterPrint() {
       return arr
         .map((x) => {
           const duty = x.note.trim();
-          return duty ? `${x.staff} • ${duty}` : x.staff;
+          return duty ? `${x.staff} (${duty})` : x.staff;
         })
         .join(", ");
     };
