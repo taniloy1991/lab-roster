@@ -50,19 +50,6 @@ export function TodayDutyOverview({
             </div>
           ))}
 
-          <div className="space-y-2 pt-1">
-            <Separator />
-            <div className="text-sm font-medium">On Leave Today</div>
-            {leaveStaffNames.length ? (
-              <ul className="list-disc space-y-1 pl-5 text-sm">
-                {leaveStaffNames.map((name) => (
-                  <li key={name}>{name}</li>
-                ))}
-              </ul>
-            ) : (
-              <div className="text-sm text-muted-foreground">No staff on leave in today’s roster.</div>
-            )}
-          </div>
         </CardContent>
       </Card>
     </section>
