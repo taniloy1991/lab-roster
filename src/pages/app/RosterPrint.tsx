@@ -236,7 +236,6 @@ export default function RosterPrint() {
             {rows.map((r) => {
               const hasMorning = !isBlank(r.morning_staff);
               const hasEvening = !isBlank(r.evening_staff);
-              const hasNight = showNight && !isBlank(r.night_staff);
 
               return (
                 <section key={String(r.duty_date)} className="break-inside-avoid rounded-md border border-border p-3">
