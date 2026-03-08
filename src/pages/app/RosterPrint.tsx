@@ -152,7 +152,6 @@ export default function RosterPrint() {
       dates.map((d) => {
         const m = byDateShift.get(`${d}:morning`);
         const e = byDateShift.get(`${d}:evening`);
-        const n = byDateShift.get(`${d}:night`);
 
         return {
           duty_date: d,
@@ -160,8 +159,6 @@ export default function RosterPrint() {
           morning_note: fmtNotes(m),
           evening_staff: fmtStaff(e),
           evening_note: fmtNotes(e),
-          night_staff: fmtStaff(n),
-          night_note: fmtNotes(n),
           leave_status: leaveStatusByDate.get(d) ?? "",
         };
       }),
