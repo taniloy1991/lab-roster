@@ -237,12 +237,6 @@ export default function RosterPrint() {
                       <div className="grid grid-cols-[90px_1fr] gap-x-3 gap-y-1">
                         <div className="text-xs font-semibold text-muted-foreground">Morning</div>
                         <div className="text-sm">{r.morning_staff}</div>
-                        {r.morning_note ? (
-                          <>
-                            <div className="text-xs text-muted-foreground">Note</div>
-                            <div className="text-xs whitespace-pre-wrap">{r.morning_note}</div>
-                          </>
-                        ) : null}
                       </div>
                     ) : null}
 
