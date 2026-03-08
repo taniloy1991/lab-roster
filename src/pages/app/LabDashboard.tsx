@@ -62,119 +62,117 @@ export default function LabDashboard() {
     if (!activeInstitutionId) return;
     setLoading(true);
 
-    const currentYear = new Date().getFullYear();
-    const yearStart = `${currentYear}-01-01`;
-    const yearEnd = `${currentYear}-12-31`;
+    try {
+      const currentYear = new Date().getFullYear();
+      const yearStart = `${currentYear}-01-01`;
+      const yearEnd = `${currentYear}-12-31`;
 
-    const settingsKeys = [
-      `overview_logo_url:${activeInstitutionId}`,
-      "overview_logo_url",
-      `overview_prepared_by_name:${activeInstitutionId}`,
-      "overview_prepared_by_name",
-      `overview_prepared_by_title:${activeInstitutionId}`,
-      "overview_prepared_by_title",
-    ];
+      const settingsKeys = [
+        `overview_logo_url:${activeInstitutionId}`,
+        "overview_logo_url",
+        `overview_prepared_by_name:${activeInstitutionId}`,
+        "overview_prepared_by_name",
+        `overview_prepared_by_title:${activeInstitutionId}`,
+        "overview_prepared_by_title",
+      ];
 
-    const [instRes, staffRes, settingsRes, clRes, offEarnRes] = await Promise.all([
-      supabase.from("institutions").select("name,updated_at").eq("id", activeInstitutionId).maybeSingle(),
-      supabase
-        .from("staff")
-        .select("id,name")
+      const [instRes, staffRes, settingsRes, clRes, offEarnRes] = await Promise.all([
+        supabase.from("institutions").select("name,updated_at").eq("id", activeInstitutionId).maybeSingle(),
+        supabase
+          .from("staff")
+          .select("id,name")
+          .eq("institution_id", activeInstitutionId)
+          .eq("is_active", true)
+          .order("name"),
+        supabase.from("app_settings").select("setting_key,setting_value").in("setting_key", settingsKeys),
+        supabase
+          .from("cl_transactions")
+          .select("total_days")
+          .eq("institution_id", activeInstitutionId)
+          .gte("start_date", yearStart)
+          .lte("end_date", yearEnd),
+        supabase
+          .from("general_off_earn")
+          .select("days_earned")
+          .eq("institution_id", activeInstitutionId)
+          .gte("start_date", yearStart)
+          .lte("end_date", yearEnd),
+      ]);
+
+      setInstitutionName(instRes.data?.name ?? null);
+      setLastUpdatedAt(instRes.data?.updated_at ?? null);
+
+      const settingsMap = new Map<string, string>();
+      for (const row of (settingsRes.data ?? []) as AppSettingRow[]) {
+        const key = String(row.setting_key ?? "").trim();
+        const value = String(row.setting_value ?? "").trim();
+        if (key && value) settingsMap.set(key, value);
+      }
+
+      const pickSetting = (specific: string, fallback: string, defaultValue: string) => {
+        return settingsMap.get(specific) ?? settingsMap.get(fallback) ?? defaultValue;
+      };
+
+      setOverviewLogo(pickSetting(`overview_logo_url:${activeInstitutionId}`, "overview_logo_url", "/images/birdem-logo.png"));
+      setOverviewPreparedByName(
+        pickSetting(`overview_prepared_by_name:${activeInstitutionId}`, "overview_prepared_by_name", "Md. Asif Hossain"),
+      );
+      setOverviewPreparedByTitle(
+        pickSetting(`overview_prepared_by_title:${activeInstitutionId}`, "overview_prepared_by_title", "Research Assistant"),
+      );
+
+      const staff = (staffRes.data ?? []) as StaffRow[];
+      const staffNameById = new Map<string, string>(staff.map((s) => [s.id, s.name]));
+
+      const todayRosterRes = await supabase
+        .from("roster_visual_entries" as any)
+        .select("shift,staff_id,responsibility_note")
         .eq("institution_id", activeInstitutionId)
-        .eq("is_active", true)
-        .order("name"),
-      supabase.from("app_settings").select("setting_key,setting_value").in("setting_key", settingsKeys),
-      supabase
-        .from("cl_transactions")
-        .select("total_days")
-        .eq("institution_id", activeInstitutionId)
-        .gte("start_date", yearStart)
-        .lte("end_date", yearEnd),
-      supabase
-        .from("general_off_earn")
-        .select("days_earned")
-        .eq("institution_id", activeInstitutionId)
-        .gte("start_date", yearStart)
-        .lte("end_date", yearEnd),
-    ]);
+        .eq("duty_date", today)
+        .not("shift", "is", null)
+        .order("created_at", { ascending: true });
 
-    setInstitutionName(instRes.data?.name ?? null);
-    setLastUpdatedAt(instRes.data?.updated_at ?? null);
+      const byShift = new Map<"morning" | "evening" | "night", Array<{ staff: string; note: string }>>([
+        ["morning", []],
+        ["evening", []],
+        ["night", []],
+      ]);
 
-    const settingsMap = new Map<string, string>();
-    for (const row of (settingsRes.data ?? []) as AppSettingRow[]) {
-      const key = String(row.setting_key ?? "").trim();
-      const value = String(row.setting_value ?? "").trim();
-      if (key && value) settingsMap.set(key, value);
+      const onDutyStaffIds = new Set<string>();
+
+      for (const r of (todayRosterRes.data ?? []) as any[]) {
+        const shift = String(r.shift) as "morning" | "evening" | "night";
+        const sid = String(r.staff_id ?? "").trim();
+        const staffName = sid ? staffNameById.get(sid) ?? "—" : "—";
+        const note = String(r.responsibility_note ?? "").trim();
+        byShift.get(shift)?.push({ staff: staffName, note });
+        if (sid) onDutyStaffIds.add(sid);
+      }
+
+      setTodayDuty([
+        { shift: "morning", entries: byShift.get("morning") ?? [] },
+        { shift: "evening", entries: byShift.get("evening") ?? [] },
+        { shift: "night", entries: byShift.get("night") ?? [] },
+      ]);
+
+      const totalElAdded = ((clRes.data ?? []) as Array<{ total_days: number | null }>).reduce(
+        (sum, row) => sum + (row.total_days ?? 0),
+        0,
+      );
+      const totalGeneralOffAdded = ((offEarnRes.data ?? []) as Array<{ days_earned: number | null }>).reduce(
+        (sum, row) => sum + (row.days_earned ?? 0),
+        0,
+      );
+
+      setKpis({
+        totalStaff: staff.length,
+        onDutyToday: onDutyStaffIds.size,
+        totalElAdded,
+        totalGeneralOffAdded,
+      });
+    } finally {
+      setLoading(false);
     }
-
-    const pickSetting = (specific: string, fallback: string, defaultValue: string) => {
-      return settingsMap.get(specific) ?? settingsMap.get(fallback) ?? defaultValue;
-    };
-
-    setOverviewLogo(pickSetting(`overview_logo_url:${activeInstitutionId}`, "overview_logo_url", "/images/birdem-logo.png"));
-    setOverviewPreparedByName(
-      pickSetting(`overview_prepared_by_name:${activeInstitutionId}`, "overview_prepared_by_name", "Md. Asif Hossain"),
-    );
-    setOverviewPreparedByTitle(
-      pickSetting(`overview_prepared_by_title:${activeInstitutionId}`, "overview_prepared_by_title", "Research Assistant"),
-    );
-
-    const staff = (staffRes.data ?? []) as StaffRow[];
-    const staffIds = staff.map((s) => s.id);
-    const staffNameById = new Map<string, string>(staff.map((s) => [s.id, s.name]));
-
-    const todayRosterRes = await supabase
-      .from("roster_visual_entries" as any)
-      .select("shift,staff_id,responsibility_note")
-      .eq("institution_id", activeInstitutionId)
-      .eq("duty_date", today)
-      .not("shift", "is", null)
-      .order("created_at", { ascending: true });
-
-
-    const byShift = new Map<"morning" | "evening" | "night", Array<{ staff: string; note: string }>>([
-      ["morning", []],
-      ["evening", []],
-      ["night", []],
-    ]);
-
-    const onDutyStaffIds = new Set<string>();
-
-    for (const r of (todayRosterRes.data ?? []) as any[]) {
-      const shift = String(r.shift) as "morning" | "evening" | "night";
-      const sid = String(r.staff_id ?? "").trim();
-      const staffName = sid ? staffNameById.get(sid) ?? "—" : "—";
-      const note = String(r.responsibility_note ?? "").trim();
-      byShift.get(shift)?.push({ staff: staffName, note });
-      if (sid) onDutyStaffIds.add(sid);
-    }
-
-
-    setTodayDuty([
-      { shift: "morning", entries: byShift.get("morning") ?? [] },
-      { shift: "evening", entries: byShift.get("evening") ?? [] },
-      { shift: "night", entries: byShift.get("night") ?? [] },
-    ]);
-    
-
-    const totalElAdded = ((clRes.data ?? []) as Array<{ total_days: number | null }>).reduce(
-      (sum, row) => sum + (row.total_days ?? 0),
-      0,
-    );
-    const totalGeneralOffAdded = ((offEarnRes.data ?? []) as Array<{ days_earned: number | null }>).reduce(
-      (sum, row) => sum + (row.days_earned ?? 0),
-      0,
-    );
-
-    setKpis({
-      totalStaff: staff.length,
-      onDutyToday: onDutyStaffIds.size,
-      totalElAdded,
-      totalGeneralOffAdded,
-    });
-
-    setLoading(false);
   };
 
   useEffect(() => {

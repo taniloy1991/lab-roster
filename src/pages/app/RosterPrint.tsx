@@ -46,122 +46,124 @@ export default function RosterPrint() {
   const load = async () => {
     setLoading(true);
 
-    const start = format(range.start, "yyyy-MM-dd");
-    const end = format(range.end, "yyyy-MM-dd");
+    try {
+      const start = format(range.start, "yyyy-MM-dd");
+      const end = format(range.end, "yyyy-MM-dd");
 
-    const selRes = await supabase
-      .from("selected_roster_dates")
-      .select("duty_date")
-      .gte("duty_date", start)
-      .lte("duty_date", end)
-      .limit(1);
+      const selRes = await supabase
+        .from("selected_roster_dates")
+        .select("duty_date")
+        .gte("duty_date", start)
+        .lte("duty_date", end)
+        .limit(1);
 
-    const hasSelection = (selRes.data ?? []).length > 0;
-    setMode(hasSelection ? "selected" : "month");
+      const hasSelection = (selRes.data ?? []).length > 0;
+      setMode(hasSelection ? "selected" : "month");
 
-    const selectedRes = hasSelection
-      ? await supabase.from("selected_roster_dates").select("duty_date").gte("duty_date", start).lte("duty_date", end)
-      : null;
+      const selectedRes = hasSelection
+        ? await supabase.from("selected_roster_dates").select("duty_date").gte("duty_date", start).lte("duty_date", end)
+        : null;
 
-    const selectedSet = new Set<string>((selectedRes?.data ?? []).map((r: any) => String(r.duty_date)));
+      const selectedSet = new Set<string>((selectedRes?.data ?? []).map((r: any) => String(r.duty_date)));
 
-    const rosterRes = await supabase
-      .from("roster_visual_entries" as any)
-      .select("duty_date,shift,staff_id,responsibility_note,leave_type,institution_id")
-      .eq("institution_id", activeInstitutionId ?? "00000000-0000-0000-0000-000000000000")
-      .gte("duty_date", start)
-      .lte("duty_date", end)
-      .order("duty_date", { ascending: true })
-      .order("created_at", { ascending: true });
+      const rosterRes = await supabase
+        .from("roster_visual_entries" as any)
+        .select("duty_date,shift,staff_id,responsibility_note,leave_type,institution_id")
+        .eq("institution_id", activeInstitutionId ?? "00000000-0000-0000-0000-000000000000")
+        .gte("duty_date", start)
+        .lte("duty_date", end)
+        .order("duty_date", { ascending: true })
+        .order("created_at", { ascending: true });
 
-    const staffIds = Array.from(
-      new Set<string>(((rosterRes.data ?? []) as any[]).map((r) => String(r.staff_id)).filter((x) => x && x !== "null")),
-    );
+      const staffIds = Array.from(
+        new Set<string>(((rosterRes.data ?? []) as any[]).map((r) => String(r.staff_id)).filter((x) => x && x !== "null")),
+      );
 
-    const staffById = new Map<string, { name: string; designation: string; phone: string }>();
-    if (staffIds.length) {
-      const staffRes = await supabase.from("staff").select("id,name,designation,phone").in("id", staffIds);
-      for (const s of (staffRes.data ?? []) as any[]) {
-        staffById.set(String(s.id), {
-          name: String(s.name ?? "").trim(),
-          designation: String(s.designation ?? "").trim(),
-          phone: String(s.phone ?? "").trim(),
-        });
+      const staffById = new Map<string, { name: string; designation: string; phone: string }>();
+      if (staffIds.length) {
+        const staffRes = await supabase.from("staff").select("id,name,designation,phone").in("id", staffIds);
+        for (const s of (staffRes.data ?? []) as any[]) {
+          staffById.set(String(s.id), {
+            name: String(s.name ?? "").trim(),
+            designation: String(s.designation ?? "").trim(),
+            phone: String(s.phone ?? "").trim(),
+          });
+        }
       }
+
+      const byDateShift = new Map<string, { staff: string; note: string }[]>();
+      const leaveByDate = new Map<string, { staff: string; leaveType: string }[]>();
+
+      for (const r of (rosterRes.data ?? []) as any[]) {
+        const d = String(r.duty_date);
+        if (hasSelection && !selectedSet.has(d)) continue;
+
+        const sid = String(r.staff_id ?? "");
+        if (!sid) continue;
+
+        const staffInfo = staffById.get(sid);
+        const name = staffInfo?.name || "—";
+        const details = [staffInfo?.designation, staffInfo?.phone].filter(Boolean).join(" • ");
+        const staffLabel = details ? `${name} • ${details}` : name;
+
+        const shiftRaw = r.shift == null ? null : String(r.shift);
+        if (shiftRaw === "morning" || shiftRaw === "evening") {
+          const note = String(r.responsibility_note ?? "").trim();
+          const k = `${d}:${shiftRaw}`;
+          const arr = byDateShift.get(k) ?? [];
+          arr.push({ staff: staffLabel, note });
+          byDateShift.set(k, arr);
+          continue;
+        }
+
+        if (shiftRaw === null) {
+          const leaveType = leaveTypeLabel[String(r.leave_type ?? "")] ?? String(r.leave_type ?? "").trim();
+          if (!leaveType) continue;
+          const arr = leaveByDate.get(d) ?? [];
+          arr.push({ staff: staffLabel, leaveType });
+          leaveByDate.set(d, arr);
+        }
+      }
+
+      const dates = Array.from(
+        new Set<string>([
+          ...Array.from(byDateShift.keys()).map((k) => k.split(":")[0]),
+          ...leaveByDate.keys(),
+        ]),
+      ).sort();
+
+      const fmtStaff = (arr?: { staff: string; note: string }[]) => {
+        if (!arr?.length) return "";
+        return arr
+          .map((x) => {
+            const duty = x.note.trim();
+            return duty ? `${x.staff} (${duty})` : x.staff;
+          })
+          .join(", ");
+      };
+
+      const fmtLeave = (arr?: { staff: string; leaveType: string }[]) => {
+        if (!arr?.length) return "";
+        return arr.map((x) => `${x.staff} (${x.leaveType})`).join(", ");
+      };
+
+      setRows(
+        dates.map((d) => {
+          const m = byDateShift.get(`${d}:morning`);
+          const e = byDateShift.get(`${d}:evening`);
+          const offCl = leaveByDate.get(d);
+
+          return {
+            duty_date: d,
+            morning_staff: fmtStaff(m),
+            evening_staff: fmtStaff(e),
+            off_cl_staff: fmtLeave(offCl),
+          };
+        }),
+      );
+    } finally {
+      setLoading(false);
     }
-
-    const byDateShift = new Map<string, { staff: string; note: string }[]>();
-    const leaveByDate = new Map<string, { staff: string; leaveType: string }[]>();
-
-    for (const r of (rosterRes.data ?? []) as any[]) {
-      const d = String(r.duty_date);
-      if (hasSelection && !selectedSet.has(d)) continue;
-
-      const sid = String(r.staff_id ?? "");
-      if (!sid) continue;
-
-      const staffInfo = staffById.get(sid);
-      const name = staffInfo?.name || "—";
-      const details = [staffInfo?.designation, staffInfo?.phone].filter(Boolean).join(" • ");
-      const staffLabel = details ? `${name} • ${details}` : name;
-
-      const shiftRaw = r.shift == null ? null : String(r.shift);
-      if (shiftRaw === "morning" || shiftRaw === "evening") {
-        const note = String(r.responsibility_note ?? "").trim();
-        const k = `${d}:${shiftRaw}`;
-        const arr = byDateShift.get(k) ?? [];
-        arr.push({ staff: staffLabel, note });
-        byDateShift.set(k, arr);
-        continue;
-      }
-
-      if (shiftRaw === null) {
-        const leaveType = leaveTypeLabel[String(r.leave_type ?? "")] ?? String(r.leave_type ?? "").trim();
-        if (!leaveType) continue;
-        const arr = leaveByDate.get(d) ?? [];
-        arr.push({ staff: staffLabel, leaveType });
-        leaveByDate.set(d, arr);
-      }
-    }
-
-    const dates = Array.from(
-      new Set<string>([
-        ...Array.from(byDateShift.keys()).map((k) => k.split(":")[0]),
-        ...leaveByDate.keys(),
-      ]),
-    ).sort();
-
-    const fmtStaff = (arr?: { staff: string; note: string }[]) => {
-      if (!arr?.length) return "";
-      return arr
-        .map((x) => {
-          const duty = x.note.trim();
-          return duty ? `${x.staff} (${duty})` : x.staff;
-        })
-        .join(", ");
-    };
-
-    const fmtLeave = (arr?: { staff: string; leaveType: string }[]) => {
-      if (!arr?.length) return "";
-      return arr.map((x) => `${x.staff} (${x.leaveType})`).join(", ");
-    };
-
-    setRows(
-      dates.map((d) => {
-        const m = byDateShift.get(`${d}:morning`);
-        const e = byDateShift.get(`${d}:evening`);
-        const offCl = leaveByDate.get(d);
-
-        return {
-          duty_date: d,
-          morning_staff: fmtStaff(m),
-          evening_staff: fmtStaff(e),
-          off_cl_staff: fmtLeave(offCl),
-        };
-      }),
-    );
-
-    setLoading(false);
   };
 
   const isBlank = (v: string | null | undefined) => !String(v ?? "").trim();
