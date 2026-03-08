@@ -188,6 +188,8 @@ export default function LabDashboard() {
     return [
       { label: "Total Staff", value: v?.totalStaff ?? "—" },
       { label: "On Duty Today", value: v?.onDutyToday ?? "—" },
+      { label: "EL Added (Year)", value: v?.totalElAdded ?? "—" },
+      { label: "General OFF Added (Year)", value: v?.totalGeneralOffAdded ?? "—" },
     ];
   }, [kpis]);
 
