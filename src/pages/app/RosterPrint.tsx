@@ -12,9 +12,7 @@ import { BirdemMicrobiologySignatures } from "@/components/print/BirdemMicrobiol
 type PdfRow = {
   duty_date: string;
   morning_staff: string;
-  morning_note: string;
   evening_staff: string;
-  evening_note: string;
   leave_status: string;
 };
 
