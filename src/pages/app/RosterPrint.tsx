@@ -223,8 +223,6 @@ export default function RosterPrint() {
                   <td className="py-3 pr-4 align-top whitespace-pre-wrap">{r.morning_note || "—"}</td>
                   <td className="py-3 pr-4 align-top">{r.evening_staff || "—"}</td>
                   <td className="py-3 pr-4 align-top whitespace-pre-wrap">{r.evening_note || "—"}</td>
-                  <td className="py-3 pr-4 align-top">{r.night_staff || "—"}</td>
-                  <td className="py-3 pr-4 align-top whitespace-pre-wrap">{r.night_note || "—"}</td>
                   <td className="py-3 pr-4 align-top whitespace-pre-wrap">{r.leave_status || "—"}</td>
                 </tr>
               ))}
