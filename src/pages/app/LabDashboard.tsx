@@ -158,9 +158,20 @@ export default function LabDashboard() {
     ]);
     
 
+    const totalElAdded = ((clRes.data ?? []) as Array<{ total_days: number | null }>).reduce(
+      (sum, row) => sum + (row.total_days ?? 0),
+      0,
+    );
+    const totalGeneralOffAdded = ((offEarnRes.data ?? []) as Array<{ days_earned: number | null }>).reduce(
+      (sum, row) => sum + (row.days_earned ?? 0),
+      0,
+    );
+
     setKpis({
       totalStaff: staff.length,
       onDutyToday: onDutyStaffIds.size,
+      totalElAdded,
+      totalGeneralOffAdded,
     });
 
     setLoading(false);
