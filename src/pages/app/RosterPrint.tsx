@@ -212,8 +212,6 @@ export default function RosterPrint() {
                 <th className="py-3 pr-4">Morning Duty Note</th>
                 <th className="py-3 pr-4">Evening Staff</th>
                 <th className="py-3 pr-4">Evening Duty Note</th>
-                <th className="py-3 pr-4">Night Staff</th>
-                <th className="py-3 pr-4">Night Duty Note</th>
                 <th className="py-3 pr-4">Leave / Status</th>
               </tr>
             </thead>
