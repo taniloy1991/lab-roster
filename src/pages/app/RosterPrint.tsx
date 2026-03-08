@@ -13,14 +13,18 @@ type PdfRow = {
   duty_date: string;
   morning_staff: string;
   evening_staff: string;
-  leave_status: string;
+  off_cl_staff: string;
+};
+
+const leaveTypeLabel: Record<string, string> = {
+  casual_leave: "CL",
+  week_off: "OFF",
 };
 
 export default function RosterPrint() {
   const { loading: authLoading, session, activeInstitutionId } = useAuth();
 
   const [params] = useSearchParams();
-  
 
   const month =
     params.get("month") ??
@@ -63,11 +67,10 @@ export default function RosterPrint() {
 
     const rosterRes = await supabase
       .from("roster_visual_entries" as any)
-      .select("duty_date,shift,staff_id,responsibility_note,institution_id")
+      .select("duty_date,shift,staff_id,responsibility_note,leave_type,institution_id")
       .eq("institution_id", activeInstitutionId ?? "00000000-0000-0000-0000-000000000000")
       .gte("duty_date", start)
       .lte("duty_date", end)
-      .not("shift", "is", null)
       .order("duty_date", { ascending: true })
       .order("created_at", { ascending: true });
 
@@ -88,45 +91,43 @@ export default function RosterPrint() {
     }
 
     const byDateShift = new Map<string, { staff: string; note: string }[]>();
+    const leaveByDate = new Map<string, { staff: string; leaveType: string }[]>();
+
     for (const r of (rosterRes.data ?? []) as any[]) {
       const d = String(r.duty_date);
       if (hasSelection && !selectedSet.has(d)) continue;
 
-      const shift = String(r.shift) as "morning" | "evening" | "night";
-      if (shift === "night") continue;
-
       const sid = String(r.staff_id ?? "");
+      if (!sid) continue;
+
       const staffInfo = staffById.get(sid);
       const name = staffInfo?.name || "—";
       const details = [staffInfo?.designation, staffInfo?.phone].filter(Boolean).join(" • ");
       const staffLabel = details ? `${name} • ${details}` : name;
-      const note = String(r.responsibility_note ?? "").trim();
 
-      const k = `${d}:${shift}`;
-      const arr = byDateShift.get(k) ?? [];
-      arr.push({ staff: staffLabel, note });
-      byDateShift.set(k, arr);
+      const shiftRaw = r.shift == null ? null : String(r.shift);
+      if (shiftRaw === "morning" || shiftRaw === "evening") {
+        const note = String(r.responsibility_note ?? "").trim();
+        const k = `${d}:${shiftRaw}`;
+        const arr = byDateShift.get(k) ?? [];
+        arr.push({ staff: staffLabel, note });
+        byDateShift.set(k, arr);
+        continue;
+      }
+
+      if (shiftRaw === null) {
+        const leaveType = leaveTypeLabel[String(r.leave_type ?? "")] ?? String(r.leave_type ?? "").trim();
+        if (!leaveType) continue;
+        const arr = leaveByDate.get(d) ?? [];
+        arr.push({ staff: staffLabel, leaveType });
+        leaveByDate.set(d, arr);
+      }
     }
 
-    const daysRes = await supabase
-      .from("roster_days")
-      .select("duty_date,leave_status")
-      .gte("duty_date", start)
-      .lte("duty_date", end)
-      .eq("institution_id", activeInstitutionId ?? "00000000-0000-0000-0000-000000000000")
-      .order("duty_date", { ascending: true });
-
-    const leaveStatusByDate = new Map<string, string>();
-    for (const r of (daysRes.data ?? []) as any[]) {
-      const d = String(r.duty_date);
-      if (hasSelection && !selectedSet.has(d)) continue;
-      const v = String(r.leave_status ?? "").trim();
-      if (v) leaveStatusByDate.set(d, v);
-    }
     const dates = Array.from(
       new Set<string>([
-        ...leaveStatusByDate.keys(),
         ...Array.from(byDateShift.keys()).map((k) => k.split(":")[0]),
+        ...leaveByDate.keys(),
       ]),
     ).sort();
 
@@ -140,16 +141,22 @@ export default function RosterPrint() {
         .join(", ");
     };
 
+    const fmtLeave = (arr?: { staff: string; leaveType: string }[]) => {
+      if (!arr?.length) return "";
+      return arr.map((x) => `${x.staff} (${x.leaveType})`).join(", ");
+    };
+
     setRows(
       dates.map((d) => {
         const m = byDateShift.get(`${d}:morning`);
         const e = byDateShift.get(`${d}:evening`);
+        const offCl = leaveByDate.get(d);
 
         return {
           duty_date: d,
           morning_staff: fmtStaff(m),
           evening_staff: fmtStaff(e),
-          leave_status: leaveStatusByDate.get(d) ?? "",
+          off_cl_staff: fmtLeave(offCl),
         };
       }),
     );
@@ -192,15 +199,14 @@ export default function RosterPrint() {
       </section>
 
       <section className="mt-6">
-        {/* Screen/table view (kept wide + scrollable) */}
         <div className="print:hidden overflow-x-auto">
-          <table className="w-full min-w-[1320px] text-sm">
+          <table className="w-full min-w-[1480px] text-sm">
             <thead className="text-left text-xs text-muted-foreground">
               <tr className="border-b">
                 <th className="py-3 pr-4">Date</th>
                 <th className="py-3 pr-4">Morning Staff + Duty</th>
                 <th className="py-3 pr-4">Evening Staff + Duty</th>
-                <th className="py-3 pr-4">Leave / Status</th>
+                <th className="py-3 pr-4">OFF/CL Staff</th>
               </tr>
             </thead>
             <tbody>
@@ -209,27 +215,24 @@ export default function RosterPrint() {
                   <td className="py-3 pr-4 tabular-nums font-medium">{r.duty_date}</td>
                   <td className="py-3 pr-4 align-top whitespace-pre-wrap">{r.morning_staff || "—"}</td>
                   <td className="py-3 pr-4 align-top whitespace-pre-wrap">{r.evening_staff || "—"}</td>
-                  <td className="py-3 pr-4 align-top whitespace-pre-wrap">{r.leave_status || "—"}</td>
+                  <td className="py-3 pr-4 align-top whitespace-pre-wrap">{r.off_cl_staff || "—"}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
 
-        {/* Print/PDF view (portrait friendly, no horizontal scroll) */}
         <div className="hidden print:block">
           <div className="space-y-4">
             {rows.map((r) => {
               const hasMorning = !isBlank(r.morning_staff);
               const hasEvening = !isBlank(r.evening_staff);
+              const hasOffCl = !isBlank(r.off_cl_staff);
 
               return (
                 <section key={String(r.duty_date)} className="break-inside-avoid rounded-md border border-border p-3">
                   <header className="flex items-start justify-between gap-3">
                     <div className="font-semibold tabular-nums">{r.duty_date}</div>
-                    {r.leave_status ? (
-                      <div className="text-right text-xs text-muted-foreground whitespace-pre-wrap">{r.leave_status}</div>
-                    ) : null}
                   </header>
 
                   <div className="mt-3 grid grid-cols-1 gap-3">
@@ -247,8 +250,14 @@ export default function RosterPrint() {
                       </div>
                     ) : null}
 
+                    {hasOffCl ? (
+                      <div className="grid grid-cols-[90px_1fr] gap-x-3 gap-y-1">
+                        <div className="text-xs font-semibold text-muted-foreground">OFF / CL</div>
+                        <div className="text-sm">{r.off_cl_staff}</div>
+                      </div>
+                    ) : null}
 
-                    {!hasMorning && !hasEvening ? (
+                    {!hasMorning && !hasEvening && !hasOffCl ? (
                       <div className="text-xs text-muted-foreground">No roster entries.</div>
                     ) : null}
                   </div>
