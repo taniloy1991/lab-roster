@@ -44,6 +44,12 @@ export default function RosterPrint() {
   const [mode, setMode] = useState<"selected" | "month">("month");
 
   const load = async () => {
+    if (!activeInstitutionId) {
+      setRows([]);
+      setMode("month");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -53,6 +59,7 @@ export default function RosterPrint() {
       const selRes = await supabase
         .from("selected_roster_dates")
         .select("duty_date")
+        .eq("institution_id", activeInstitutionId)
         .gte("duty_date", start)
         .lte("duty_date", end)
         .limit(1);
@@ -61,7 +68,12 @@ export default function RosterPrint() {
       setMode(hasSelection ? "selected" : "month");
 
       const selectedRes = hasSelection
-        ? await supabase.from("selected_roster_dates").select("duty_date").gte("duty_date", start).lte("duty_date", end)
+        ? await supabase
+            .from("selected_roster_dates")
+            .select("duty_date")
+            .eq("institution_id", activeInstitutionId)
+            .gte("duty_date", start)
+            .lte("duty_date", end)
         : null;
 
       const selectedSet = new Set<string>((selectedRes?.data ?? []).map((r: any) => String(r.duty_date)));
