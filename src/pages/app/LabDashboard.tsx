@@ -132,12 +132,6 @@ export default function LabDashboard() {
       if (sid) onDutyStaffIds.add(sid);
     }
 
-    const leaveNameSet = new Set<string>();
-    for (const r of (todayLeaveRosterRes.data ?? []) as any[]) {
-      const sid = String(r.staff_id ?? "").trim();
-      const staffName = sid ? staffNameById.get(sid) ?? "" : "";
-      if (staffName) leaveNameSet.add(staffName);
-    }
 
     setTodayDuty([
       { shift: "morning", entries: byShift.get("morning") ?? [] },
