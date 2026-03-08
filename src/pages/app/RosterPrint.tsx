@@ -98,7 +98,10 @@ export default function RosterPrint() {
 
       const shift = String(r.shift) as "morning" | "evening" | "night";
       const sid = String(r.staff_id ?? "");
-      const name = staffNameById.get(sid) ?? "—";
+      const staffInfo = staffById.get(sid);
+      const name = staffInfo?.name || "—";
+      const details = [staffInfo?.designation, staffInfo?.phone].filter(Boolean).join(" • ");
+      const staffLabel = details ? `${name} • ${details}` : name;
       const note = String(r.responsibility_note ?? "").trim();
 
       const k = `${d}:${shift}`;
