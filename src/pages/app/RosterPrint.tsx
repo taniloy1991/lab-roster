@@ -198,10 +198,8 @@ export default function RosterPrint() {
             <thead className="text-left text-xs text-muted-foreground">
               <tr className="border-b">
                 <th className="py-3 pr-4">Date</th>
-                <th className="py-3 pr-4">Morning Staff</th>
-                <th className="py-3 pr-4">Morning Duty Note</th>
-                <th className="py-3 pr-4">Evening Staff</th>
-                <th className="py-3 pr-4">Evening Duty Note</th>
+                <th className="py-3 pr-4">Morning Staff + Duty</th>
+                <th className="py-3 pr-4">Evening Staff + Duty</th>
                 <th className="py-3 pr-4">Leave / Status</th>
               </tr>
             </thead>
