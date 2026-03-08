@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 
 import { RosterMonthTable } from "./roster/RosterMonthTable";
 import type { Shift, StaffRow } from "./roster/types";
+import type { VisualLeaveType } from "./roster/useRosterVisualMonth";
 import { useRosterVisualMonth } from "./roster/useRosterVisualMonth";
 
 const shifts: Shift[] = ["morning", "evening"];
@@ -32,7 +33,18 @@ export default function RosterCalendar() {
     return { start, end };
   }, [month]);
 
-  const { loading, monthDays, reload, byDateShift, addShiftEntry, updateShiftEntry, removeEntry } = useRosterVisualMonth({
+  const {
+    loading,
+    monthDays,
+    reload,
+    byDateShift,
+    leaveByDate,
+    addShiftEntry,
+    updateShiftEntry,
+    addLeaveEntry,
+    updateLeaveEntry,
+    removeEntry,
+  } = useRosterVisualMonth({
     activeInstitutionId,
     month,
   });
@@ -57,7 +69,6 @@ export default function RosterCalendar() {
     void loadStaff();
   }, [activeInstitutionId]);
 
-  // Persisted selection (backend table selected_roster_dates)
   const [selectedDates, setSelectedDates] = useState<Set<string>>(() => new Set());
 
   const loadSelectedDates = async () => {
@@ -123,63 +134,6 @@ export default function RosterCalendar() {
     nav(`/print/roster?${qs.toString()}`);
   };
 
-  // Manual Leave/Status (free text) stored in roster_days.leave_status
-  const [leaveStatusByDate, setLeaveStatusByDate] = useState<Map<string, string>>(() => new Map());
-
-  const loadLeaveStatuses = async () => {
-    if (!activeInstitutionId) return;
-
-    const start = format(range.start, "yyyy-MM-dd");
-    const end = format(range.end, "yyyy-MM-dd");
-
-    const res = await supabase
-      .from("roster_days")
-      .select("duty_date,leave_status")
-      .eq("institution_id", activeInstitutionId)
-      .gte("duty_date", start)
-      .lte("duty_date", end);
-
-    const map = new Map<string, string>();
-    for (const r of (res.data ?? []) as any[]) {
-      map.set(String(r.duty_date), String(r.leave_status ?? ""));
-    }
-    setLeaveStatusByDate(map);
-  };
-
-  useEffect(() => {
-    void loadLeaveStatuses();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeInstitutionId, month]);
-
-  const setLeaveStatus = async (p: { dutyDate: string; value: string }) => {
-    if (!activeInstitutionId) return;
-
-    const trimmed = p.value.trim();
-
-    // Upsert without relying on a DB unique constraint
-    const existing = await supabase
-      .from("roster_days")
-      .select("id")
-      .eq("institution_id", activeInstitutionId)
-      .eq("duty_date", p.dutyDate)
-      .maybeSingle();
-
-    if (existing.data?.id) {
-      await supabase
-        .from("roster_days")
-        .update({ leave_status: trimmed || null })
-        .eq("id", existing.data.id);
-    } else {
-      await supabase.from("roster_days").insert({
-        institution_id: activeInstitutionId,
-        duty_date: p.dutyDate,
-        leave_status: trimmed || null,
-      });
-    }
-
-    await loadLeaveStatuses();
-  };
-
   if (!session) return null;
 
   return (
@@ -187,7 +141,7 @@ export default function RosterCalendar() {
       <header className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div>
           <h2 className="text-2xl font-semibold tracking-tight">Duty roster</h2>
-          <p className="text-sm text-muted-foreground">Planning tool only (manual Duty Notes + manual Leave/Status).</p>
+          <p className="text-sm text-muted-foreground">Planning tool with date-wise Morning, Evening and OFF/CL assignment.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Input type="month" value={month} onChange={(e) => setMonth(e.target.value)} className="w-[190px]" />
@@ -204,7 +158,6 @@ export default function RosterCalendar() {
             onClick={() => {
               void reload();
               void loadSelectedDates();
-              void loadLeaveStatuses();
             }}
             disabled={loading}
           >
@@ -218,7 +171,7 @@ export default function RosterCalendar() {
           <div className="flex flex-col gap-1 md:flex-row md:items-baseline md:justify-between">
             <div>
               <CardTitle className="text-lg">Month view</CardTitle>
-              <CardDescription>Pick one staff per shift, type a duty note, and type Leave/Status manually.</CardDescription>
+              <CardDescription>Pick one or more staff per shift and add date-wise OFF/CL staff assignments.</CardDescription>
             </div>
             <div className="text-xs text-muted-foreground">
               {selectedDates.size ? `${selectedDates.size} selected` : "No date selected → exports full month"}
@@ -234,11 +187,13 @@ export default function RosterCalendar() {
             onToggleDate={(d) => void toggleDate(d)}
             onToggleAll={() => void selectAll()}
             byDateShift={byDateShift}
-            leaveStatusByDate={leaveStatusByDate}
-            onSetLeaveStatus={(p) => void setLeaveStatus(p)}
+            leaveByDate={leaveByDate}
             onAddShiftEntry={(p) => void addShiftEntry(p)}
             onUpdateShiftEntry={(p) => void updateShiftEntry(p)}
+            onAddLeaveEntry={(p: { dutyDate: string; staffId: string; leaveType: VisualLeaveType }) => void addLeaveEntry(p)}
+            onUpdateLeaveEntry={(p: { id: string; staffId: string; leaveType: VisualLeaveType }) => void updateLeaveEntry(p)}
             onRemoveShiftEntry={(p) => void removeEntry(p)}
+            onRemoveLeaveEntry={(p) => void removeEntry(p)}
           />
         </CardContent>
       </Card>
