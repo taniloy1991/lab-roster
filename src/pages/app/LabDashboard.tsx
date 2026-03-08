@@ -215,7 +215,7 @@ export default function LabDashboard() {
 
       <KpiCards items={kpiItems} />
 
-      <TodayDutyOverview dateLabel={format(parseISO(`${today}T00:00:00`), "dd MMM yyyy")} shifts={todayDuty} />
+      <TodayDutyOverview dateLabel={format(parseISO(`${today}T00:00:00`), "dd MMM yyyy")} shifts={todayDuty.filter((s) => s.shift !== "night")} />
     </div>
   );
 }
