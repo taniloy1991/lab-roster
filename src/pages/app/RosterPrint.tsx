@@ -95,6 +95,8 @@ export default function RosterPrint() {
       if (hasSelection && !selectedSet.has(d)) continue;
 
       const shift = String(r.shift) as "morning" | "evening" | "night";
+      if (shift === "night") continue;
+
       const sid = String(r.staff_id ?? "");
       const staffInfo = staffById.get(sid);
       const name = staffInfo?.name || "—";
