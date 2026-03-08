@@ -109,10 +109,13 @@ export function AppShell() {
                     {isSuperAdmin && (myInstitutions?.length ?? 0) > 0 ? (
                       <div className="mt-3">
                         <p className="mb-1 text-[11px] font-medium text-muted-foreground">Institution</p>
-                        <Select
+                        <select
+                          className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none ring-offset-background focus:ring-2 focus:ring-ring focus:ring-offset-2"
                           value={activeInstitutionId ?? ""}
-                          onValueChange={async (nextId) => {
+                          onChange={async (e) => {
                             if (!userId) return;
+                            const nextId = e.target.value;
+                            if (!nextId) return;
                             await supabase
                               .from("profiles")
                               .update({ active_institution_id: nextId })
@@ -121,17 +124,15 @@ export function AppShell() {
                             navigate("/app", { replace: true });
                           }}
                         >
-                          <SelectTrigger className="h-9">
-                            <SelectValue placeholder="Select institution" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {myInstitutions?.map((inst) => (
-                              <SelectItem key={inst.id} value={inst.id}>
-                                {inst.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                          <option value="" disabled>
+                            Select institution
+                          </option>
+                          {myInstitutions?.map((inst) => (
+                            <option key={inst.id} value={inst.id}>
+                              {inst.name}
+                            </option>
+                          ))}
+                        </select>
                       </div>
                     ) : null}
                   </div>
