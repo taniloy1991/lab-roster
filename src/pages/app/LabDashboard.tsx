@@ -10,7 +10,6 @@ import { KpiCards, type KpiItem } from "./lab/KpiCards";
 import { TodayDutyOverview, type TodayDutyShift } from "./lab/TodayDutyOverview";
 
 type StaffRow = { id: string; name: string };
-type HolidayRow = { staff_id: string | null; holiday_type: string | null };
 type AppSettingRow = { setting_key: string | null; setting_value: string | null };
 
 function BdClock() {
