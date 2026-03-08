@@ -79,11 +79,15 @@ export default function RosterPrint() {
       new Set<string>(((rosterRes.data ?? []) as any[]).map((r) => String(r.staff_id)).filter((x) => x && x !== "null")),
     );
 
-    const staffNameById = new Map<string, string>();
+    const staffById = new Map<string, { name: string; designation: string; phone: string }>();
     if (staffIds.length) {
-      const staffRes = await supabase.from("staff").select("id,name").in("id", staffIds);
+      const staffRes = await supabase.from("staff").select("id,name,designation,phone").in("id", staffIds);
       for (const s of (staffRes.data ?? []) as any[]) {
-        staffNameById.set(String(s.id), String(s.name ?? "").trim());
+        staffById.set(String(s.id), {
+          name: String(s.name ?? "").trim(),
+          designation: String(s.designation ?? "").trim(),
+          phone: String(s.phone ?? "").trim(),
+        });
       }
     }
 
@@ -94,12 +98,15 @@ export default function RosterPrint() {
 
       const shift = String(r.shift) as "morning" | "evening" | "night";
       const sid = String(r.staff_id ?? "");
-      const name = staffNameById.get(sid) ?? "—";
+      const staffInfo = staffById.get(sid);
+      const name = staffInfo?.name || "—";
+      const details = [staffInfo?.designation, staffInfo?.phone].filter(Boolean).join(" • ");
+      const staffLabel = details ? `${name} • ${details}` : name;
       const note = String(r.responsibility_note ?? "").trim();
 
       const k = `${d}:${shift}`;
       const arr = byDateShift.get(k) ?? [];
-      arr.push({ staff: name, note });
+      arr.push({ staff: staffLabel, note });
       byDateShift.set(k, arr);
     }
 
