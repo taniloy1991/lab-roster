@@ -204,7 +204,7 @@ export function RosterMonthTable(props: {
                               <SelectContent>
                                 {staff.map((s) => (
                                   <SelectItem key={s.id} value={s.id}>
-                                    {s.name}
+                                    {s.name} {s.designation ? `• ${s.designation}` : ""} {s.phone ? `• ${s.phone}` : ""}
                                   </SelectItem>
                                 ))}
                               </SelectContent>
