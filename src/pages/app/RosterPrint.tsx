@@ -207,10 +207,8 @@ export default function RosterPrint() {
               {rows.map((r) => (
                 <tr key={String(r.duty_date)} className="border-b last:border-b-0">
                   <td className="py-3 pr-4 tabular-nums font-medium">{r.duty_date}</td>
-                  <td className="py-3 pr-4 align-top">{r.morning_staff || "—"}</td>
-                  <td className="py-3 pr-4 align-top whitespace-pre-wrap">{r.morning_note || "—"}</td>
-                  <td className="py-3 pr-4 align-top">{r.evening_staff || "—"}</td>
-                  <td className="py-3 pr-4 align-top whitespace-pre-wrap">{r.evening_note || "—"}</td>
+                  <td className="py-3 pr-4 align-top whitespace-pre-wrap">{r.morning_staff || "—"}</td>
+                  <td className="py-3 pr-4 align-top whitespace-pre-wrap">{r.evening_staff || "—"}</td>
                   <td className="py-3 pr-4 align-top whitespace-pre-wrap">{r.leave_status || "—"}</td>
                 </tr>
               ))}
