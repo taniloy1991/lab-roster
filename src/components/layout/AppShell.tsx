@@ -133,11 +133,21 @@ export function AppShell() {
               <div className="border-b p-5">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="text-xs font-medium text-muted-foreground">Laboratory Roster Management</p>
+                    <div className="mb-3 flex items-center gap-2">
+                      <img
+                        src={appLogo ?? "/images/lab-roaster-app-logo-2.png"}
+                        alt="App logo"
+                        className="h-9 w-9 rounded-md object-contain"
+                        loading="eager"
+                      />
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground">Laboratory Roster Management</p>
+                        <h1 className="text-base font-semibold tracking-tight">Dashboard</h1>
+                      </div>
+                    </div>
                     {institutionName ? (
                       <p className="mt-1 truncate text-xs font-medium text-foreground/80">{institutionName}</p>
                     ) : null}
-                    <h1 className="text-base font-semibold tracking-tight">Dashboard</h1>
 
                     {isSuperAdmin && (myInstitutions?.length ?? 0) > 0 ? (
                       <div className="mt-3">
