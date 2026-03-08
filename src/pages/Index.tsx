@@ -30,9 +30,6 @@ const Index = () => {
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <Card className="w-full max-w-lg">
         <CardHeader>
-          <div className="mb-2 flex justify-center">
-            <img src={appLogo} alt="Lab roster app logo" className="h-20 w-20 object-contain" loading="eager" />
-          </div>
           <CardTitle>Laboratory Roster Management</CardTitle>
           <CardDescription>Minimal multi-institution roster, leave & OFF balance system.</CardDescription>
         </CardHeader>

@@ -94,7 +94,7 @@ export default function LabDashboard() {
       return settingsMap.get(specific) ?? settingsMap.get(fallback) ?? defaultValue;
     };
 
-    setOverviewLogo(pickSetting(`overview_logo_url:${activeInstitutionId}`, "overview_logo_url", "/images/lab-roaster-app-logo-2.png"));
+    setOverviewLogo(pickSetting(`overview_logo_url:${activeInstitutionId}`, "overview_logo_url", "/images/birdem-logo.png"));
     setOverviewPreparedByName(
       pickSetting(`overview_prepared_by_name:${activeInstitutionId}`, "overview_prepared_by_name", "Md. Asif Hossain"),
     );
