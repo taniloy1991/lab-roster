@@ -12,9 +12,7 @@ import { BirdemMicrobiologySignatures } from "@/components/print/BirdemMicrobiol
 type PdfRow = {
   duty_date: string;
   morning_staff: string;
-  morning_note: string;
   evening_staff: string;
-  evening_note: string;
   leave_status: string;
 };
 
@@ -134,18 +132,12 @@ export default function RosterPrint() {
 
     const fmtStaff = (arr?: { staff: string; note: string }[]) => {
       if (!arr?.length) return "";
-      return arr.map((x) => x.staff).join(", ");
-    };
-
-    const fmtNotes = (arr?: { staff: string; note: string }[]) => {
-      if (!arr?.length) return "";
-      const notesOnly = arr
+      return arr
         .map((x) => {
-          const t = x.note.trim();
-          return t ? `${x.staff}: ${t}` : "";
+          const duty = x.note.trim();
+          return duty ? `${x.staff} • ${duty}` : x.staff;
         })
-        .filter(Boolean);
-      return notesOnly.join("\n");
+        .join(", ");
     };
 
     setRows(
@@ -156,9 +148,7 @@ export default function RosterPrint() {
         return {
           duty_date: d,
           morning_staff: fmtStaff(m),
-          morning_note: fmtNotes(m),
           evening_staff: fmtStaff(e),
-          evening_note: fmtNotes(e),
           leave_status: leaveStatusByDate.get(d) ?? "",
         };
       }),
@@ -208,10 +198,8 @@ export default function RosterPrint() {
             <thead className="text-left text-xs text-muted-foreground">
               <tr className="border-b">
                 <th className="py-3 pr-4">Date</th>
-                <th className="py-3 pr-4">Morning Staff</th>
-                <th className="py-3 pr-4">Morning Duty Note</th>
-                <th className="py-3 pr-4">Evening Staff</th>
-                <th className="py-3 pr-4">Evening Duty Note</th>
+                <th className="py-3 pr-4">Morning Staff + Duty</th>
+                <th className="py-3 pr-4">Evening Staff + Duty</th>
                 <th className="py-3 pr-4">Leave / Status</th>
               </tr>
             </thead>
@@ -219,10 +207,8 @@ export default function RosterPrint() {
               {rows.map((r) => (
                 <tr key={String(r.duty_date)} className="border-b last:border-b-0">
                   <td className="py-3 pr-4 tabular-nums font-medium">{r.duty_date}</td>
-                  <td className="py-3 pr-4 align-top">{r.morning_staff || "—"}</td>
-                  <td className="py-3 pr-4 align-top whitespace-pre-wrap">{r.morning_note || "—"}</td>
-                  <td className="py-3 pr-4 align-top">{r.evening_staff || "—"}</td>
-                  <td className="py-3 pr-4 align-top whitespace-pre-wrap">{r.evening_note || "—"}</td>
+                  <td className="py-3 pr-4 align-top whitespace-pre-wrap">{r.morning_staff || "—"}</td>
+                  <td className="py-3 pr-4 align-top whitespace-pre-wrap">{r.evening_staff || "—"}</td>
                   <td className="py-3 pr-4 align-top whitespace-pre-wrap">{r.leave_status || "—"}</td>
                 </tr>
               ))}
@@ -251,12 +237,6 @@ export default function RosterPrint() {
                       <div className="grid grid-cols-[90px_1fr] gap-x-3 gap-y-1">
                         <div className="text-xs font-semibold text-muted-foreground">Morning</div>
                         <div className="text-sm">{r.morning_staff}</div>
-                        {r.morning_note ? (
-                          <>
-                            <div className="text-xs text-muted-foreground">Note</div>
-                            <div className="text-xs whitespace-pre-wrap">{r.morning_note}</div>
-                          </>
-                        ) : null}
                       </div>
                     ) : null}
 
@@ -264,12 +244,6 @@ export default function RosterPrint() {
                       <div className="grid grid-cols-[90px_1fr] gap-x-3 gap-y-1">
                         <div className="text-xs font-semibold text-muted-foreground">Evening</div>
                         <div className="text-sm">{r.evening_staff}</div>
-                        {r.evening_note ? (
-                          <>
-                            <div className="text-xs text-muted-foreground">Note</div>
-                            <div className="text-xs whitespace-pre-wrap">{r.evening_note}</div>
-                          </>
-                        ) : null}
                       </div>
                     ) : null}
 
