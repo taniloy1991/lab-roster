@@ -7,13 +7,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useAuth } from "@/providers/AuthProvider";
 
 type NavItem = { to: string; label: string; icon: React.ReactNode; when?: "lab" | "staff" | "any" };
