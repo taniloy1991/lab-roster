@@ -168,7 +168,6 @@ export default function RosterPrint() {
   };
 
   const isBlank = (v: string | null | undefined) => !String(v ?? "").trim();
-  const showNight = useMemo(() => rows.some((r) => !isBlank(r.night_staff) || !isBlank(r.night_note)), [rows]);
 
   useEffect(() => {
     void load();
