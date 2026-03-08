@@ -138,7 +138,7 @@ export default function LabDashboard() {
       { shift: "evening", entries: byShift.get("evening") ?? [] },
       { shift: "night", entries: byShift.get("night") ?? [] },
     ]);
-    setTodayLeaveNames(Array.from(leaveNameSet).sort((a, b) => a.localeCompare(b)));
+    
 
     setKpis({
       totalStaff: staff.length,
